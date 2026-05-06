@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>OpenAI PS</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <header>
+        <h1>OpenAI PS</h1>
+        <p>Generate an image and place it into the active document.</p>
+      </header>
+
+      <section class="field">
+        <div class="label">Base URL</div>
+        <textarea id="baseUrl" class="single-line" rows="1">https://sub.love-gwen.top</textarea>
+      </section>
+
+      <section class="field">
+        <div class="label">Endpoint</div>
+        <textarea id="endpointPath" class="single-line" rows="1">/v1/images/generations</textarea>
+      </section>
+
+      <section class="field">
+        <div class="label">Model</div>
+        <textarea id="model" class="single-line" rows="1">gpt-image-2</textarea>
+      </section>
+
+      <section class="field">
+        <div class="label">API Key</div>
+        <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+        <div class="row">
+          <label class="check">
+            <input id="rememberKey" type="checkbox" />
+            Remember locally
+          </label>
+          <button id="forgetKey" type="button" class="secondary">Forget</button>
+        </div>
+      </section>
+
+      <section class="field">
+        <div class="label">Source</div>
+        <select id="sourceMode">
+          <option value="text" selected>Text only</option>
+          <option value="activeLayer" disabled>Active layer reference (PS 2023+)</option>
+          <option value="document" disabled>Document reference (PS 2023+)</option>
+        </select>
+      </section>
+
+      <section class="field">
+        <div class="label">Prompt</div>
+        <textarea id="prompt" rows="6" placeholder="A clean product mockup, soft studio light, transparent background"></textarea>
+      </section>
+
+      <section class="field">
+        <div class="label">Size</div>
+        <select id="size">
+          <option value="1024x1024">Square 1024</option>
+          <option value="1024x1536">Portrait 1024 x 1536</option>
+          <option value="1536x1024">Landscape 1536 x 1024</option>
+          <option value="auto" selected>Auto</option>
+        </select>
+      </section>
+
+      <section class="field">
+        <div class="label">Quality</div>
+        <select id="quality">
+          <option value="auto" selected>Auto</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </section>
+
+      <section class="field">
+        <div class="label">Background</div>
+        <select id="background">
+          <option value="auto" selected>Auto</option>
+          <option value="transparent">Transparent</option>
+          <option value="opaque">Opaque</option>
+        </select>
+      </section>
+
+      <section class="field">
+        <div class="label">Extra JSON</div>
+        <textarea id="extraJson" rows="4" placeholder="{ &quot;seed&quot;: 123 }"></textarea>
+      </section>
+
+      <section class="status muted" id="requestUrl">Request URL: -</section>
+
+      <button id="generate" type="button" class="primary">Generate Layer</button>
+
+      <section id="status" class="status" aria-live="polite">Ready.</section>
+      <img id="preview" alt="Generated preview" />
+    </main>
+    <script src="main.js"></script>
+  </body>
+</html>
