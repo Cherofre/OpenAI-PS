@@ -62,6 +62,11 @@
                 <strong>使用当前 Photoshop 文档作为参考图</strong>
                 <span>生成前会自动导出当前画布，作为图片编辑接口的 image 输入。</span>
               </div>
+              <div class="manual-reference-row">
+                <button id="addReferenceFilesBtn" class="mini-button" type="button">添加参考图</button>
+                <button id="clearReferenceFilesBtn" class="mini-button" type="button">清空</button>
+                <span id="manualReferenceSummary" class="manual-reference-summary">未添加手动参考图</span>
+              </div>
               <label class="context-slider">
                 <span class="form-label">影响强度 <strong>0.75</strong></span>
                 <input type="range" min="0" max="1" step="0.01" value="0.75" disabled />
@@ -219,14 +224,14 @@
         <div class="settings-scroll">
           <section class="settings-group">
             <div class="group-title">API Configuration</div>
-            <label class="form-field"><span class="field-label">Base URL</span><input id="baseUrlInput" type="text" placeholder="http://127.0.0.1:49456/v1" /></label>
+            <label class="form-field"><span class="field-label">Base URL</span><input id="baseUrlInput" type="text" placeholder="https://sub.love-gwen.top/v1" /></label>
             <label class="form-field"><span class="field-label">API Key</span><div class="input-with-action"><input id="apiKeyInput" type="password" placeholder="sk-..." /><button id="apiKeyVisibilityBtn" class="field-action icon-button" type="button" title="显示 API Key" aria-label="显示 API Key"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.75 12s3.2-5.25 9.25-5.25S21.25 12 21.25 12s-3.2 5.25-9.25 5.25S2.75 12 2.75 12Z" /><circle cx="12" cy="12" r="2.6" /><path d="M4.5 19.5 19.5 4.5" /></svg></button></div></label>
             <label class="form-field"><span class="field-label">Model ID</span><input id="modelInput" type="text" value="gpt-image-2" /></label>
           </section>
           <section class="settings-group">
             <div class="group-title">Endpoints</div>
-            <label class="form-field"><span class="field-label">Image Gen Path</span><input id="generationPathInput" type="text" value="/images/generations" /></label>
-            <label class="form-field"><span class="field-label">Edit Path</span><input id="editPathInput" type="text" value="/images/edits" /></label>
+            <label class="form-field"><span class="field-label">Image Gen Path</span><input id="generationPathInput" type="text" value="/v1/images/generations" /></label>
+            <label class="form-field"><span class="field-label">Edit Path</span><input id="editPathInput" type="text" value="/v1/images/edits" /></label>
           </section>
         </div>
         <footer class="settings-footer">

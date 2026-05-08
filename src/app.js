@@ -17,8 +17,9 @@ entrypoints.setup({
 
 const HISTORY_KEY = "openaiPhotoshop.history.v1";
 const SETTINGS_KEY = "openaiPhotoshop.settings.v1";
-const DEFAULT_BASE_URL = "http://127.0.0.1:49456/v1";
+const DEFAULT_BASE_URL = "https://sub.love-gwen.top/v1";
 const MAX_BATCH_COUNT = 10;
+const MAX_REFERENCE_FILES = 16;
 const PROMPT_PRESETS = [
   {
     label: "产品质感",
@@ -54,6 +55,7 @@ const state = {
   outputView: "results",
   results: [],
   history: [],
+  manualReferenceFiles: [],
   selectedId: null,
   busy: false,
 };
@@ -71,6 +73,7 @@ function init() {
   updateModeUI();
   updateKeyBadge();
   syncCountUI();
+  renderManualReferenceSummary();
   renderResults();
   renderHistory();
   renderOutputView();
@@ -119,6 +122,8 @@ function bindEvents() {
 
   $("useSelectionSizeBtn").addEventListener("click", applySelectionRatioToSize);
   $("matchDocumentBtn").addEventListener("click", applyDocumentPaddingPreset);
+  $("addReferenceFilesBtn").addEventListener("click", addManualReferenceFiles);
+  $("clearReferenceFilesBtn").addEventListener("click", clearManualReferenceFiles);
   $("clearPromptBtn").addEventListener("click", clearPrompts);
   $("promptPresetBtn").addEventListener("click", togglePresetMenu);
   $("loadHistoryBtn").addEventListener("click", loadHistory);
@@ -145,8 +150,8 @@ function loadSettings() {
     baseUrl: DEFAULT_BASE_URL,
     apiKey: "",
     model: "gpt-image-2",
-    generationPath: "/images/generations",
-    editPath: "/images/edits",
+    generationPath: "/v1/images/generations",
+    editPath: "/v1/images/edits",
     size: "auto",
     quality: "auto",
     count: 1,
@@ -193,8 +198,8 @@ function getSettings() {
     baseUrl,
     apiKey: $("apiKeyInput").value.trim(),
     model: $("modelInput").value.trim() || "gpt-image-2",
-    generationPath: normalizePath($("generationPathInput").value.trim() || "/images/generations"),
-    editPath: normalizePath($("editPathInput").value.trim() || "/images/edits"),
+    generationPath: normalizePath($("generationPathInput").value.trim() || "/v1/images/generations"),
+    editPath: normalizePath($("editPathInput").value.trim() || "/v1/images/edits"),
     size: $("sizeInput").value,
     quality: $("qualityInput").value,
     count: clampInteger($("countInput").value, 1, MAX_BATCH_COUNT, 1),
@@ -313,6 +318,58 @@ function syncCountUI() {
   $("countValue").textContent = String(count);
 }
 
+async function addManualReferenceFiles() {
+  try {
+    const selected = await fs.getFileForOpening({
+      allowMultiple: true,
+      types: ["png", "jpg", "jpeg", "webp"],
+    });
+    const files = Array.isArray(selected) ? selected : selected ? [selected] : [];
+    for (const file of files) {
+      if (state.manualReferenceFiles.length >= MAX_REFERENCE_FILES) break;
+      state.manualReferenceFiles.push(file);
+    }
+    renderManualReferenceSummary();
+    if (files.length) {
+      setStatus(`已添加 ${files.length} 张参考图`);
+    }
+  } catch (error) {
+    setStatus(`添加参考图失败：${error?.message || error}`);
+  }
+}
+
+function clearManualReferenceFiles() {
+  state.manualReferenceFiles = [];
+  renderManualReferenceSummary();
+  setStatus("手动参考图已清空");
+}
+
+function renderManualReferenceSummary() {
+  const summary = $("manualReferenceSummary");
+  if (!summary) return;
+  if (!state.manualReferenceFiles.length) {
+    summary.textContent = "未添加手动参考图";
+    return;
+  }
+  const names = state.manualReferenceFiles.slice(0, 2).map((file) => file.name || "image").join(", ");
+  const suffix = state.manualReferenceFiles.length > 2 ? ` +${state.manualReferenceFiles.length - 2}` : "";
+  summary.textContent = `${state.manualReferenceFiles.length} 张：${names}${suffix}`;
+}
+
+async function readManualReferenceImages() {
+  const images = [];
+  for (const file of state.manualReferenceFiles.slice(0, MAX_REFERENCE_FILES)) {
+    const buffer = await file.read({ format: storage.formats.binary });
+    const mimeType = guessMimeType(file.name || "");
+    images.push({
+      b64: arrayBufferToBase64(buffer),
+      mimeType,
+      name: file.name || `reference.${mimeToExtension(mimeType)}`,
+    });
+  }
+  return images;
+}
+
 function clearPrompts() {
   $("promptInput").value = "";
   $("negativePromptInput").value = "";
@@ -420,8 +477,9 @@ async function runGeneration() {
     } else if (state.mode === "reference") {
       setProgress(18, true);
       const image = await exportActiveDocumentAsBase64();
+      const manualImages = await readManualReferenceImages();
       setProgress(36, true);
-      items = await requestEdits(settings, buildImageEditPrompt(prompt, "reference"), image, null);
+      items = await requestEdits(settings, buildImageEditPrompt(prompt, "reference"), image, null, { extraImages: manualImages });
     } else if (state.mode === "inpaint") {
       setProgress(15, true);
       const selection = await getSelectionInfo();
@@ -571,9 +629,11 @@ async function requestEdits(settings, prompt, imageB64, maskB64, options = {}) {
 async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = {}) {
   const form = new FormData();
   const requestSize = options.size || settings.size;
+  const extraImages = Array.isArray(options.extraImages) ? options.extraImages : [];
   const imageBytes = estimateBase64Bytes(imageB64);
   const maskBytes = maskB64 ? estimateBase64Bytes(maskB64) : 0;
-  const uploadBytes = imageBytes + maskBytes;
+  const extraBytes = extraImages.reduce((sum, image) => sum + estimateBase64Bytes(image.b64), 0);
+  const uploadBytes = imageBytes + maskBytes + extraBytes;
   if (uploadBytes > 75 * 1024 * 1024) {
     throw new Error(`上传图片过大：${formatBytes(uploadBytes)}。请缩小选区或画布后重试`);
   }
@@ -586,14 +646,20 @@ async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = 
   }
   form.append("quality", settings.quality);
   form.append("output_format", settings.format);
-  form.append("image", base64ToBlob(imageB64, "image/png"), "input.png");
+  const primaryImage = base64ToBlob(imageB64, "image/png");
+  form.append("image", primaryImage, "input.png");
+  form.append("image[]", primaryImage, "input.png");
+  extraImages.forEach((image, index) => {
+    const mime = image.mimeType || "image/png";
+    form.append("image[]", base64ToBlob(image.b64, mime), image.name || `reference-${index + 1}.${mimeToExtension(mime)}`);
+  });
   if (maskB64) {
     form.append("mask", base64ToBlob(maskB64, "image/png"), "mask.png");
   }
 
   setStatus(maskB64
     ? `正在上传局部编辑：图像 ${formatBytes(imageBytes)}，Mask ${formatBytes(maskBytes)}`
-    : `正在上传参考图：${formatBytes(imageBytes)}`);
+    : `正在上传参考图：${formatBytes(imageBytes + extraBytes)}`);
 
   const response = await sendRequest(buildApiUrl(settings.baseUrl, settings.editPath), {
     method: "POST",
@@ -1618,6 +1684,19 @@ function mimeTypeForFormat(format) {
   return "image/png";
 }
 
+function guessMimeType(name) {
+  const lower = String(name || "").toLowerCase();
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "image/png";
+}
+
+function mimeToExtension(mimeType) {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  return "png";
+}
+
 async function canvasToBase64(canvas) {
   if (canvas && typeof canvas.toBlob === "function") {
     const blob = await new Promise((resolve, reject) => {
@@ -1875,12 +1954,15 @@ function cleanObject(object) {
 function normalizeBaseUrl(value) {
   let url = String(value || "").trim().replace(/\/+$/, "");
   url = url.replace(/^(https?:\/\/)(?:localhost|127\.0\.0\.1):9456(\/|$)/i, `http://127.0.0.1:49456$2`);
-  url = url.replace(/\/(?:chat\/completions|images\/generations|images\/edits|models)$/i, "");
+  url = url.replace(/\/(?:v1\/)?(?:chat\/completions|images\/generations|images\/edits|models)$/i, "");
   return url.replace(/\/+$/, "");
 }
 
 function normalizePath(value) {
-  const path = String(value || "");
+  let path = String(value || "");
+  if (path.startsWith("/images/")) {
+    path = `/v1${path}`;
+  }
   return path.startsWith("/") ? path : `/${path}`;
 }
 
