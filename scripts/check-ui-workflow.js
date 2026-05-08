@@ -34,5 +34,10 @@ assert(
     /\.prompt-input:focus,[\s\S]*box-shadow:\s*inset 0 0 0 1px/.test(css),
   "interactive controls should have visible focus and advanced toggle styling"
 );
+assert(
+  /地址已隐藏/.test(js) &&
+    /未配置 Key/.test(js),
+  "collapsed API summary should make hidden endpoint state clear"
+);
 
 console.log("ui workflow checks passed");

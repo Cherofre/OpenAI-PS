@@ -276,7 +276,7 @@ function updateQuickApiSummary() {
   if (!summary) return;
   const hasKey = Boolean($("apiKeyInput").value.trim());
   const model = $("modelInput").value.trim() || "gpt-image-2";
-  summary.textContent = hasKey ? `已配置 · ${model}` : `未配置 · ${model}`;
+  summary.textContent = hasKey ? `已配置 · ${model} · 地址已隐藏` : `未配置 Key · ${model}`;
 }
 
 function toggleQuickApiPanel() {
