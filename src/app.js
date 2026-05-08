@@ -150,6 +150,9 @@ function bindEvents() {
   $("loadHistoryBtn").addEventListener("click", loadHistory);
   $("clearHistoryBtn").addEventListener("click", clearHistory);
   $("countInput").addEventListener("input", syncCountUI);
+  $("sizeInput").addEventListener("change", syncCustomSizeUI);
+  $("customWidthInput").addEventListener("input", syncCustomSizeUI);
+  $("customHeightInput").addEventListener("input", syncCustomSizeUI);
   $("apiKeyInput").addEventListener("input", updateKeyBadge);
 
   document.addEventListener("click", (event) => {
@@ -182,6 +185,8 @@ function loadSettings() {
     stylePreset: "none",
     timeout: 300,
     infiniteTimeout: false,
+    customWidth: 1536,
+    customHeight: 864,
   };
 
   const stored = readJsonLocal(SETTINGS_KEY, {});
@@ -204,6 +209,9 @@ function loadSettings() {
   $("stylePresetInput").value = settings.stylePreset || "none";
   $("timeoutInput").value = clampInteger(settings.timeout, 1, 3600, 300);
   $("infiniteTimeoutInput").checked = Boolean(settings.infiniteTimeout);
+  $("customWidthInput").value = clampInteger(settings.customWidth, 16, 3840, 1536);
+  $("customHeightInput").value = clampInteger(settings.customHeight, 16, 3840, 864);
+  syncCustomSizeUI();
 }
 
 function saveSettings() {
@@ -242,6 +250,8 @@ function getSettings() {
     stylePreset: $("stylePresetInput").value || "none",
     timeout: clampInteger($("timeoutInput").value, 1, 3600, 300),
     infiniteTimeout: $("infiniteTimeoutInput").checked,
+    customWidth: clampInteger($("customWidthInput").value, 16, 3840, 1536),
+    customHeight: clampInteger($("customHeightInput").value, 16, 3840, 864),
   };
 }
 
@@ -300,7 +310,7 @@ function updateModeUI() {
     reference: {
       icon: "▧",
       title: "参考图模式",
-      text: "使用当前 Photoshop 文档作为参考图，再按提示词进行变化。",
+      text: "当前 Photoshop 画布作为主参考图，手动参考图会一起加入图片编辑接口。",
       prompt: "修改提示词 (Prompt Modification)",
       negative: "反向提示词 (Negative Prompt)",
       placeholder: "描述如何修改或延展当前参考图...",
@@ -372,6 +382,58 @@ function syncCountUI() {
   const count = clampInteger($("countInput").value, 1, MAX_BATCH_COUNT, 1);
   $("countInput").value = count;
   $("countValue").textContent = String(count);
+}
+
+function syncCustomSizeUI() {
+  const enabled = $("sizeInput").value === "custom";
+  $("customSizeControls").classList.toggle("hidden", !enabled);
+  const validation = validateCustomSize($("customWidthInput").value, $("customHeightInput").value);
+  $("customSizeHint").textContent = enabled ? validation.message : "选择自定义尺寸后生效。";
+  $("customSizeHint").classList.toggle("is-invalid", enabled && !validation.ok);
+}
+
+function validateCustomSize(widthValue, heightValue) {
+  const width = Number(widthValue);
+  const height = Number(heightValue);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+    return { ok: false, message: "请输入宽和高两个正整数。" };
+  }
+  if (width > 3840 || height > 3840) {
+    return { ok: false, message: "宽高都不能超过 3840。" };
+  }
+  if (width % 16 !== 0 || height % 16 !== 0) {
+    return { ok: false, message: `宽高都需要是 16 的倍数，建议 ${roundToMultiple(width, 16)} x ${roundToMultiple(height, 16)}。` };
+  }
+  const pixels = width * height;
+  if (pixels < 655360) {
+    return { ok: false, message: "尺寸太小，请提高宽或高。" };
+  }
+  if (pixels > 8294400) {
+    return { ok: false, message: "尺寸太大，请降低宽或高。" };
+  }
+  const ratio = Math.max(width, height) / Math.max(1, Math.min(width, height));
+  if (ratio > 3) {
+    return { ok: false, message: "宽高比例不能超过 3:1。" };
+  }
+  return { ok: true, message: `将使用 ${width} x ${height}。` };
+}
+
+function getResolvedRequestSize(settings) {
+  if (settings.size !== "custom") return settings.size;
+  return `${settings.customWidth}x${settings.customHeight}`;
+}
+
+function describeRequestPlan(settings, mode) {
+  const endpoint = mode === "generate" ? "generations" : "edits";
+  const parts = [
+    `准备 ${MODE_META[mode]?.label || "图片"} 请求`,
+    `接口 ${endpoint}`,
+    `尺寸 ${getResolvedRequestSize(settings)}`,
+  ];
+  if (mode === "reference") {
+    parts.push(`参考图 ${state.manualReferenceFiles.length + 1} 张`);
+  }
+  return parts.join(" · ");
 }
 
 function confirmCurrentDocumentReference() {
@@ -585,6 +647,12 @@ async function runGeneration() {
     return;
   }
 
+  const customSize = validateCustomSize(settings.customWidth, settings.customHeight);
+  if (settings.size === "custom" && !customSize.ok) {
+    setStatus(customSize.message);
+    return;
+  }
+
   const negativePrompt = $("negativePromptInput").value.trim();
   const prompt = buildEffectivePrompt(rawPrompt, negativePrompt, settings.posterText);
   saveSettings();
@@ -592,9 +660,9 @@ async function runGeneration() {
   setProgress(8, true);
 
   try {
-    setStatus("正在准备请求...");
+    setStatus(describeRequestPlan(settings, state.mode));
     let items = [];
-    let outputSize = settings.size;
+    let outputSize = getResolvedRequestSize(settings);
     let targetRect = null;
     let placementRect = null;
 
@@ -739,7 +807,7 @@ async function requestSingleGeneration(settings, prompt) {
     model: settings.model,
     prompt,
     n: 1,
-    size: settings.size,
+    size: getResolvedRequestSize(settings),
     output_format: settings.format,
   });
   applyOptionalImageParameters(payload, settings);
@@ -775,7 +843,7 @@ async function requestEdits(settings, prompt, imageB64, maskB64, options = {}) {
 
 async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = {}) {
   const form = new FormData();
-  const requestSize = options.size || settings.size;
+  const requestSize = options.size || getResolvedRequestSize(settings);
   const extraImages = Array.isArray(options.extraImages) ? options.extraImages : [];
   const imageBytes = estimateBase64Bytes(imageB64);
   const maskBytes = maskB64 ? estimateBase64Bytes(maskB64) : 0;

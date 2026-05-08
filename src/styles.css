@@ -625,6 +625,34 @@ h2 {
   background-size: 10px 10px;
 }
 
+.custom-size-controls {
+  clear: both;
+  overflow: hidden;
+  margin: 2px 0 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-panel);
+}
+
+.custom-size-controls .form-field {
+  display: inline-block;
+  width: 48%;
+  margin-right: 2%;
+  vertical-align: top;
+}
+
+.custom-size-hint {
+  clear: both;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.custom-size-hint.is-invalid {
+  color: var(--danger);
+}
+
 .mode-context-panel {
   display: flex;
   flex-direction: column;
@@ -1340,6 +1368,26 @@ h2 {
 
 .checkbox-line span {
   vertical-align: middle;
+}
+
+.custom-size-controls {
+  display: block;
+  clear: both;
+  overflow: hidden;
+  margin: 2px 0 8px;
+  padding: 8px;
+}
+
+.custom-size-controls .form-field {
+  display: inline-block;
+  width: 48%;
+  margin-right: 2%;
+  vertical-align: top;
+}
+
+.custom-size-hint {
+  display: block;
+  clear: both;
 }
 
 .outpaint-panel {

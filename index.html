@@ -149,6 +149,7 @@
                     <option value="2048x2048">2048 x 2048</option>
                     <option value="2048x1152">2048 x 1152</option>
                     <option value="1152x2048">1152 x 2048</option>
+                    <option value="custom">自定义</option>
                   </select>
                 </div>
               </label>
@@ -204,6 +205,17 @@
               <input id="infiniteTimeoutInput" type="checkbox" />
               <span>无限超时</span>
             </label>
+            <div id="customSizeControls" class="custom-size-controls hidden">
+              <label class="form-field">
+                <span class="form-label">自定义宽</span>
+                <input id="customWidthInput" type="number" min="16" max="3840" step="16" value="1536" />
+              </label>
+              <label class="form-field">
+                <span class="form-label">自定义高</span>
+                <input id="customHeightInput" type="number" min="16" max="3840" step="16" value="864" />
+              </label>
+              <div id="customSizeHint" class="custom-size-hint">宽高需为 16 的倍数。</div>
+            </div>
             <label class="checkbox-line" for="fitSelectionInput">
               <input id="fitSelectionInput" type="checkbox" checked />
               <span>贴合当前选区</span>
