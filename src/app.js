@@ -177,6 +177,11 @@ function loadSettings() {
     quality: "auto",
     count: 1,
     format: "png",
+    posterText: "",
+    seed: -1,
+    stylePreset: "none",
+    timeout: 300,
+    infiniteTimeout: false,
   };
 
   const stored = readJsonLocal(SETTINGS_KEY, {});
@@ -194,6 +199,11 @@ function loadSettings() {
   $("qualityInput").value = settings.quality;
   $("countInput").value = clampInteger(settings.count, 1, MAX_BATCH_COUNT, 1);
   $("formatInput").value = settings.format;
+  $("posterTextInput").value = settings.posterText || "";
+  $("seedInput").value = Number.isFinite(Number(settings.seed)) ? Number(settings.seed) : -1;
+  $("stylePresetInput").value = settings.stylePreset || "none";
+  $("timeoutInput").value = clampInteger(settings.timeout, 1, 3600, 300);
+  $("infiniteTimeoutInput").checked = Boolean(settings.infiniteTimeout);
 }
 
 function saveSettings() {
@@ -227,6 +237,11 @@ function getSettings() {
     quality: $("qualityInput").value,
     count: clampInteger($("countInput").value, 1, MAX_BATCH_COUNT, 1),
     format: $("formatInput").value,
+    posterText: $("posterTextInput").value.trim(),
+    seed: clampInteger($("seedInput").value, -1, 2147483647, -1),
+    stylePreset: $("stylePresetInput").value || "none",
+    timeout: clampInteger($("timeoutInput").value, 1, 3600, 300),
+    infiniteTimeout: $("infiniteTimeoutInput").checked,
   };
 }
 
@@ -483,6 +498,7 @@ async function readManualReferenceImages() {
 function clearPrompts() {
   $("promptInput").value = "";
   $("negativePromptInput").value = "";
+  $("posterTextInput").value = "";
   $("promptPresetMenu").classList.add("hidden");
   setStatus("提示词已清空");
 }
@@ -569,7 +585,8 @@ async function runGeneration() {
     return;
   }
 
-  const prompt = buildPrompt(rawPrompt, $("negativePromptInput").value.trim());
+  const negativePrompt = $("negativePromptInput").value.trim();
+  const prompt = buildEffectivePrompt(rawPrompt, negativePrompt, settings.posterText);
   saveSettings();
   setBusy(true);
   setProgress(8, true);
@@ -620,10 +637,18 @@ async function runGeneration() {
       b64: item.b64,
       url: item.url || null,
       prompt,
+      rawPrompt,
+      negativePrompt,
+      posterText: settings.posterText,
       mode: state.mode,
       model: settings.model,
       size: outputSize,
-      quality: settings.quality,
+      quality: getEffectiveQuality(settings),
+      seed: settings.seed,
+      stylePreset: settings.stylePreset,
+      timeout: settings.timeout,
+      infiniteTimeout: settings.infiniteTimeout,
+      referenceCount: state.mode === "reference" ? state.manualReferenceFiles.length + 1 : 0,
       format: item.format || settings.format,
       targetRect,
       placementRect,
@@ -651,9 +676,20 @@ async function runGeneration() {
   }
 }
 
+function buildEffectivePrompt(prompt, negative, posterText) {
+  let effective = prompt;
+  const posterTextClean = String(posterText || "").trim();
+  if (posterTextClean) {
+    effective = `${effective}\n\nThe image must contain this exact readable text:\n${posterTextClean}\n不要省略这些文字，不要改写这些文字，不要使用乱码、伪文字或无法辨认的装饰字。`;
+  }
+  if (negative) {
+    effective = `${effective}\n\nAvoid: ${negative}`;
+  }
+  return effective;
+}
+
 function buildPrompt(prompt, negative) {
-  if (!negative) return prompt;
-  return `${prompt}\n\nAvoid: ${negative}`;
+  return buildEffectivePrompt(prompt, negative, "");
 }
 
 function buildImageEditPrompt(prompt, mode) {
@@ -704,9 +740,9 @@ async function requestSingleGeneration(settings, prompt) {
     prompt,
     n: 1,
     size: settings.size,
-    quality: settings.quality,
     output_format: settings.format,
   });
+  applyOptionalImageParameters(payload, settings);
 
   const response = await sendRequest(buildApiUrl(settings.baseUrl, settings.generationPath), {
     method: "POST",
@@ -715,6 +751,7 @@ async function requestSingleGeneration(settings, prompt) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+    timeoutMs: getRequestTimeoutMs(settings),
   }, "文生图请求");
 
   return parseOpenAIImageResponse(response);
@@ -754,7 +791,7 @@ async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = 
   if (requestSize) {
     form.append("size", requestSize);
   }
-  form.append("quality", settings.quality);
+  appendOptionalImageParameters(form, settings);
   form.append("output_format", settings.format);
   const primaryImage = base64ToBlob(imageB64, "image/png");
   form.append("image", primaryImage, "input.png");
@@ -777,6 +814,7 @@ async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = 
       Authorization: `Bearer ${settings.apiKey}`,
     },
     body: form,
+    timeoutMs: getRequestTimeoutMs(settings),
   }, maskB64 ? "局部编辑请求" : "参考图编辑请求");
 
   return parseOpenAIImageResponse(response);
@@ -806,7 +844,13 @@ async function parseOpenAIImageResponse(response) {
 }
 
 async function sendRequest(url, options = {}, label = "请求") {
-  const { responseType, ...fetchOptions } = options;
+  const { responseType, timeoutMs, ...fetchOptions } = options;
+  const controller = timeoutMs > 0 && typeof AbortController !== "undefined" ? new AbortController() : null;
+  let timeoutId = null;
+  if (controller) {
+    fetchOptions.signal = controller.signal;
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  }
   try {
     return await fetch(url, fetchOptions);
   } catch (fetchError) {
@@ -819,6 +863,10 @@ async function sendRequest(url, options = {}, label = "请求") {
     } catch (xhrError) {
       throw makeNetworkError(xhrError, url, label);
     }
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
@@ -826,7 +874,7 @@ function sendXhrRequest(url, options = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(options.method || "GET", url, true);
-    xhr.timeout = 180000;
+    xhr.timeout = options.timeoutMs > 0 ? options.timeoutMs : 0;
     if (options.responseType) {
       xhr.responseType = options.responseType;
     }
@@ -1638,10 +1686,18 @@ async function saveHistoryItem(item) {
       id: item.id,
       fileName,
       prompt: item.prompt,
+      rawPrompt: item.rawPrompt || item.prompt,
       mode: item.mode,
       model: item.model,
       size: item.size,
       quality: item.quality,
+      negativePrompt: item.negativePrompt || "",
+      posterText: item.posterText || "",
+      seed: item.seed,
+      stylePreset: item.stylePreset,
+      timeout: item.timeout,
+      infiniteTimeout: item.infiniteTimeout,
+      referenceCount: item.referenceCount || 0,
       format,
       targetRect: item.targetRect || null,
       placementRect: item.placementRect || null,
@@ -1785,6 +1841,36 @@ function formatBytes(bytes) {
   if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
   if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`;
   return `${Math.round(value)} B`;
+}
+
+function getEffectiveQuality(settings) {
+  return settings?.quality && settings.quality !== "auto" ? settings.quality : "auto";
+}
+
+function applyOptionalImageParameters(payload, settings) {
+  const quality = getEffectiveQuality(settings);
+  if (quality !== "auto") {
+    payload.quality = quality;
+  }
+  if (settings.seed !== -1) {
+    payload.seed = settings.seed;
+  }
+  if (settings.stylePreset && settings.stylePreset !== "none") {
+    payload.style_preset = settings.stylePreset;
+  }
+}
+
+function appendOptionalImageParameters(form, settings) {
+  const params = {};
+  applyOptionalImageParameters(params, settings);
+  Object.entries(params).forEach(([key, value]) => {
+    form.append(key, String(value));
+  });
+}
+
+function getRequestTimeoutMs(settings) {
+  if (settings?.infiniteTimeout) return 0;
+  return clampInteger(settings?.timeout, 1, 3600, 300) * 1000;
 }
 
 function stripDataUrl(value) {
