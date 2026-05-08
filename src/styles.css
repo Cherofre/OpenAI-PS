@@ -961,6 +961,22 @@ h2 {
   padding-bottom: 6px;
 }
 
+.history-search-input,
+.history-mode-filter {
+  height: 26px;
+  min-height: 26px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.history-search-input {
+  width: 118px;
+}
+
+.history-mode-filter {
+  width: 78px;
+}
+
 .mini-button {
   height: 24px;
   padding: 0 8px;
@@ -982,6 +998,11 @@ h2 {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+}
+
+.reuse-selected-button {
+  width: 100%;
+  min-height: 28px;
 }
 
 .selected-preview {
@@ -1020,11 +1041,58 @@ h2 {
   color: var(--danger);
 }
 
+.selected-details {
+  display: block;
+  overflow: hidden;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-panel);
+}
+
+.selected-detail-row {
+  display: inline-block;
+  width: 49%;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  vertical-align: top;
+}
+
+.selected-detail-row span,
+.selected-detail-row strong {
+  display: block;
+}
+
+.selected-detail-row strong {
+  overflow: hidden;
+  color: var(--text-soft);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .thumb-grid {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
   margin: -4px;
+}
+
+.thumb-strip {
+  flex: none;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 3px;
+}
+
+.thumb-strip .thumb-tile,
+.thumb-strip .thumb-placeholder {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 82px;
+  min-height: 82px;
 }
 
 .thumb-tile,
@@ -1424,11 +1492,31 @@ h2 {
   float: right;
 }
 
+.history-search-input,
+.history-mode-filter {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.reuse-selected-button {
+  display: block;
+}
+
+.selected-details {
+  display: block;
+}
+
 .thumb-grid {
   display: block;
   clear: both;
   overflow: hidden;
   margin: 0;
+}
+
+.thumb-strip {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
 }
 
 .thumb-tile,
@@ -1561,6 +1649,13 @@ h2 {
   margin-right: 8px;
   margin-bottom: 6px;
   vertical-align: top;
+}
+
+.thumb-strip .thumb-tile,
+.thumb-strip .thumb-placeholder {
+  width: 96px;
+  height: 82px;
+  min-height: 82px;
 }
 
 .manual-reference-summary {

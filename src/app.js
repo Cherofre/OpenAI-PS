@@ -149,6 +149,9 @@ function bindEvents() {
   $("promptPresetBtn").addEventListener("click", togglePresetMenu);
   $("loadHistoryBtn").addEventListener("click", loadHistory);
   $("clearHistoryBtn").addEventListener("click", clearHistory);
+  $("historySearchInput").addEventListener("input", renderHistory);
+  $("historyModeFilter").addEventListener("change", renderHistory);
+  $("reuseSelectedBtn").addEventListener("click", reuseSelectedSettings);
   $("countInput").addEventListener("input", syncCountUI);
   $("sizeInput").addEventListener("change", syncCustomSizeUI);
   $("customWidthInput").addEventListener("input", syncCustomSizeUI);
@@ -1627,12 +1630,13 @@ function renderResults() {
   $("resultCount").textContent = `${state.results.length}`;
   $("importSelectedBtn").disabled = !state.selectedId || state.busy;
   renderSelectedPreview();
+  renderSelectedDetails();
   renderGrid($("resultGrid"), state.results, true);
   renderOutputView();
 }
 
 function renderHistory() {
-  renderGrid($("historyGrid"), state.history, false);
+  renderGrid($("historyGrid"), getFilteredHistory(), false);
   renderOutputView();
 }
 
@@ -1644,9 +1648,28 @@ function renderOutputView() {
   $("resultGrid").classList.toggle("hidden", state.outputView !== "results");
   $("historyGrid").classList.toggle("hidden", state.outputView !== "history");
   $("historyActions").classList.toggle("hidden", state.outputView !== "history");
+  $("reuseSelectedBtn").classList.toggle("hidden", !getSelectedResult());
+  $("selectedDetails").classList.toggle("hidden", !getSelectedResult());
 
   document.querySelectorAll("[data-output]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.output === state.outputView);
+  });
+}
+
+function getFilteredHistory() {
+  const query = ($("historySearchInput")?.value || "").trim().toLowerCase();
+  const mode = $("historyModeFilter")?.value || "all";
+  return state.history.filter((item) => {
+    if (mode !== "all" && item.mode !== mode) return false;
+    if (!query) return true;
+    return [
+      item.prompt,
+      item.rawPrompt,
+      item.negativePrompt,
+      item.posterText,
+      item.model,
+      item.fileName,
+    ].some((value) => String(value || "").toLowerCase().includes(query));
   });
 }
 
@@ -1705,6 +1728,37 @@ function renderSelectedPreview() {
   preview.classList.remove("hidden", "is-error");
 }
 
+function renderSelectedDetails() {
+  const details = $("selectedDetails");
+  const item = getSelectedResult();
+  details.innerHTML = "";
+  if (!item) {
+    details.classList.add("hidden");
+    return;
+  }
+
+  [
+    ["模式", MODE_META[item.mode]?.label || item.mode || "结果"],
+    ["模型", item.model || "gpt-image-2"],
+    ["尺寸", item.size || "auto"],
+    ["质量", item.quality || "auto"],
+    ["Seed", item.seed ?? "-1"],
+    ["风格", item.stylePreset || "none"],
+    ["参考图", item.referenceCount || 0],
+  ].forEach(([label, value]) => {
+    const row = document.createElement("div");
+    row.className = "selected-detail-row";
+    const key = document.createElement("span");
+    key.textContent = label;
+    const val = document.createElement("strong");
+    val.textContent = String(value);
+    row.appendChild(key);
+    row.appendChild(val);
+    details.appendChild(row);
+  });
+  details.classList.remove("hidden");
+}
+
 function fillGridPlaceholders(container, count, type) {
   for (let index = 0; index < count; index += 1) {
     const placeholder = document.createElement("div");
@@ -1728,6 +1782,45 @@ function selectResult(item, isCurrent) {
 function getSelectedResult() {
   return state.results.find((item) => item.id === state.selectedId) ||
     state.history.find((item) => item.id === state.selectedId);
+}
+
+function reuseSelectedSettings() {
+  const item = getSelectedResult();
+  if (!item) {
+    setStatus("请先选择一张结果或历史图");
+    return;
+  }
+
+  $("promptInput").value = item.rawPrompt || item.prompt || "";
+  $("negativePromptInput").value = item.negativePrompt || "";
+  $("posterTextInput").value = item.posterText || "";
+  if (item.size) {
+    if (/^\d+x\d+$/i.test(item.size) && !Array.from($("sizeInput").options).some((option) => option.value === item.size)) {
+      const parsed = parseImageSize(item.size);
+      $("sizeInput").value = "custom";
+      if (parsed) {
+        $("customWidthInput").value = String(parsed.width);
+        $("customHeightInput").value = String(parsed.height);
+      }
+    } else {
+      $("sizeInput").value = item.size;
+    }
+  }
+  if (item.quality) {
+    $("qualityInput").value = item.quality;
+  }
+  if (item.seed !== undefined && item.seed !== null) {
+    $("seedInput").value = String(item.seed);
+  }
+  if (item.stylePreset) {
+    $("stylePresetInput").value = item.stylePreset;
+  }
+  if (item.timeout) {
+    $("timeoutInput").value = String(item.timeout);
+  }
+  $("infiniteTimeoutInput").checked = Boolean(item.infiniteTimeout);
+  syncCustomSizeUI();
+  setStatus("已复用选中项的提示词和参数");
 }
 
 function describeItem(item) {

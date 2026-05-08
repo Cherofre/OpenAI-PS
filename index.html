@@ -255,14 +255,24 @@
                 </button>
               </div>
               <div id="historyActions" class="history-toolbar hidden">
+                <input id="historySearchInput" class="history-search-input" type="search" placeholder="搜索" />
+                <select id="historyModeFilter" class="history-mode-filter">
+                  <option value="all">全部</option>
+                  <option value="generate">文生图</option>
+                  <option value="reference">参考图</option>
+                  <option value="inpaint">选区</option>
+                  <option value="outpaint">扩图</option>
+                </select>
                 <button id="loadHistoryBtn" class="mini-button" type="button">加载</button>
                 <button id="clearHistoryBtn" class="mini-button" type="button">清空历史</button>
               </div>
             </div>
             <div class="output-body">
               <div id="selectedPreview" class="selected-preview hidden"></div>
-              <div id="resultGrid" class="thumb-grid"><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div></div>
-              <div id="historyGrid" class="thumb-grid hidden"><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div></div>
+              <div id="selectedDetails" class="selected-details hidden"></div>
+              <button id="reuseSelectedBtn" class="mini-button reuse-selected-button hidden" type="button">复用提示词和参数</button>
+              <div id="resultGrid" class="thumb-grid thumb-strip"><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div><div class="thumb-placeholder"></div></div>
+              <div id="historyGrid" class="thumb-grid thumb-strip hidden"><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div><div class="thumb-placeholder is-history"></div></div>
             </div>
           </section>
         </div>
