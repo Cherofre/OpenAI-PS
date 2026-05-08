@@ -864,15 +864,9 @@ async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = 
   }
   appendOptionalImageParameters(form, settings);
   form.append("output_format", settings.format);
-  const primaryImage = base64ToBlob(imageB64, "image/png");
-  form.append("image", primaryImage, "input.png");
-  form.append("image[]", primaryImage, "input.png");
-  extraImages.forEach((image, index) => {
-    const mime = image.mimeType || "image/png";
-    form.append("image[]", base64ToBlob(image.b64, mime), image.name || `reference-${index + 1}.${mimeToExtension(mime)}`);
-  });
+  appendEditImageFiles(form, imageB64, extraImages);
   if (maskB64) {
-    form.append("mask", base64ToBlob(maskB64, "image/png"), "mask.png");
+    appendMultipartFile(form, "mask", createMultipartImageFile(maskB64, "image/png", "mask.png"), "mask.png");
   }
 
   setStatus(maskB64
@@ -1988,6 +1982,35 @@ function updateStatusTone(message) {
 
 function base64ToBlob(b64, mimeType) {
   return new Blob([base64ToArrayBuffer(stripDataUrl(b64))], { type: mimeType });
+}
+
+function createMultipartImageFile(b64, mimeType, fileName) {
+  const blob = base64ToBlob(b64, mimeType);
+  try {
+    if (typeof File !== "undefined") {
+      return new File([blob], fileName, { type: mimeType });
+    }
+  } catch (error) {
+    console.warn("File wrapper unavailable for multipart upload", error);
+  }
+  return blob;
+}
+
+function appendMultipartFile(form, fieldName, file, fileName) {
+  try {
+    form.append(fieldName, file, fileName);
+  } catch (error) {
+    form.append(fieldName, file);
+  }
+}
+
+function appendEditImageFiles(form, imageB64, extraImages = []) {
+  appendMultipartFile(form, "image", createMultipartImageFile(imageB64, "image/png", "input.png"), "input.png");
+  extraImages.forEach((image, index) => {
+    const mime = image.mimeType || "image/png";
+    const fileName = image.name || `reference-${index + 1}.${mimeToExtension(mime)}`;
+    appendMultipartFile(form, "image", createMultipartImageFile(image.b64, mime, fileName), fileName);
+  });
 }
 
 function estimateBase64Bytes(value) {
