@@ -66,6 +66,20 @@ const $ = (id) => document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", init);
 
+function setOpenAiPsMode(mode) {
+  if (!MODE_META[mode]) return;
+  state.mode = mode;
+  updateModeUI();
+  if ($("statusBar")) {
+    setStatus(`已切换到：${MODE_META[mode].label}`);
+  }
+}
+
+globalThis.setOpenAiPsMode = setOpenAiPsMode;
+if (typeof window !== "undefined") {
+  window.setOpenAiPsMode = setOpenAiPsMode;
+}
+
 function init() {
   loadSettings();
   renderPromptPresets();
@@ -81,18 +95,26 @@ function init() {
 }
 
 function bindEvents() {
-  $("modeGrid").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-mode]");
-    if (!button) return;
-    state.mode = button.dataset.mode;
-    updateModeUI();
+  document.querySelectorAll("#modeGrid [data-mode]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      setOpenAiPsMode(event.currentTarget.getAttribute("data-mode"));
+    });
+  });
+  ["modeSelect", "modeSelectMain"].forEach((id) => {
+    const select = $(id);
+    if (!select) return;
+    ["change", "input"].forEach((eventName) => {
+      select.addEventListener(eventName, (event) => {
+        setOpenAiPsMode(event.target.value);
+      });
+    });
   });
 
-  $("outputTabs").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-output]");
-    if (!button) return;
-    state.outputView = button.dataset.output;
-    renderOutputView();
+  document.querySelectorAll("#outputTabs [data-output]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      state.outputView = event.currentTarget.getAttribute("data-output");
+      renderOutputView();
+    });
   });
 
   $("settingsToggleBtn").addEventListener("click", openSettingsView);
@@ -219,8 +241,14 @@ function updateKeyBadge() {
 
 function updateModeUI() {
   document.querySelectorAll("[data-mode]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.mode === state.mode);
+    button.classList.toggle("is-active", button.getAttribute("data-mode") === state.mode);
   });
+  if ($("modeSelect")) {
+    $("modeSelect").value = state.mode;
+  }
+  if ($("modeSelectMain")) {
+    $("modeSelectMain").value = state.mode;
+  }
 
   $("outpaintControls").classList.toggle("hidden", state.mode !== "outpaint");
   $("sizeField").classList.toggle("hidden", state.mode === "inpaint");

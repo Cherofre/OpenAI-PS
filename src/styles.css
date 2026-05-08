@@ -307,6 +307,8 @@ h2 {
 }
 
 .mode-segmented button {
+  position: relative;
+  z-index: 1;
   flex: 1 1 0;
   height: 28px;
   margin: 0 2px;
@@ -319,6 +321,7 @@ h2 {
   font-weight: 600;
   line-height: 16px;
   text-align: center;
+  pointer-events: auto;
 }
 
 .mode-segmented button:hover {
@@ -329,6 +332,46 @@ h2 {
 .mode-segmented button.is-active {
   background: var(--surface-raised);
   color: var(--primary);
+}
+
+.mode-fallback-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mode-fallback-select span {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mode-fallback-select select {
+  flex: 1 1 auto;
+  height: 30px;
+  min-width: 0;
+  border-color: var(--primary);
+  background: var(--surface-low);
+  color: var(--text);
+}
+
+.mode-switch-panel {
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-low);
+}
+
+.mode-switch-panel .form-field {
+  margin: 0;
+}
+
+.mode-switch-panel select {
+  height: 32px;
+  border-color: var(--primary);
+  background: var(--surface-panel);
+  color: var(--text);
 }
 
 .quick-api-panel {
