@@ -109,14 +109,13 @@ function bindEvents() {
 
   $("settingsToggleBtn").addEventListener("click", openSettingsView);
   $("settingsBackBtn").addEventListener("click", closeSettingsView);
+  $("quickApiToggleBtn").addEventListener("click", toggleQuickApiPanel);
   $("quickSaveApiKeyBtn").addEventListener("click", saveQuickSettings);
   $("quickTestConnectionBtn").addEventListener("click", testConnection);
   [
     ["quickBaseUrlInput", "baseUrlInput"],
     ["quickApiKeyInput", "apiKeyInput"],
     ["quickModelInput", "modelInput"],
-    ["quickGenerationPathInput", "generationPathInput"],
-    ["quickEditPathInput", "editPathInput"],
   ].forEach(([quickId, settingsId]) => {
     $(quickId).addEventListener("input", () => {
       $(settingsId).value = $(quickId).value;
@@ -189,9 +188,7 @@ function loadSettings() {
   $("modelInput").value = settings.model;
   $("quickModelInput").value = settings.model;
   $("generationPathInput").value = settings.generationPath;
-  $("quickGenerationPathInput").value = settings.generationPath;
   $("editPathInput").value = settings.editPath;
-  $("quickEditPathInput").value = settings.editPath;
   $("sizeInput").value = settings.size;
   $("qualityInput").value = settings.quality;
   $("countInput").value = clampInteger(settings.count, 1, MAX_BATCH_COUNT, 1);
@@ -205,8 +202,6 @@ function saveSettings() {
   $("quickBaseUrlInput").value = settings.baseUrl;
   $("quickApiKeyInput").value = settings.apiKey;
   $("quickModelInput").value = settings.model;
-  $("quickGenerationPathInput").value = settings.generationPath;
-  $("quickEditPathInput").value = settings.editPath;
   updateKeyBadge();
 }
 
@@ -214,9 +209,8 @@ function saveQuickSettings() {
   $("baseUrlInput").value = $("quickBaseUrlInput").value;
   $("apiKeyInput").value = $("quickApiKeyInput").value;
   $("modelInput").value = $("quickModelInput").value;
-  $("generationPathInput").value = $("quickGenerationPathInput").value;
-  $("editPathInput").value = $("quickEditPathInput").value;
   saveSettings();
+  setQuickApiCollapsed(true);
   setStatus($("apiKeyInput").value.trim() ? "服务配置已保存" : "服务配置已保存，未填写 API Key");
 }
 
@@ -242,6 +236,25 @@ function updateKeyBadge() {
   dot.classList.toggle("is-off", !hasKey);
   dot.title = hasKey ? "已配置 API Key" : "未配置 API Key";
   $("quickApiKeyInput").value = $("apiKeyInput").value;
+  updateQuickApiSummary();
+}
+
+function updateQuickApiSummary() {
+  const summary = $("quickApiSummary");
+  if (!summary) return;
+  const hasKey = Boolean($("apiKeyInput").value.trim());
+  const model = $("modelInput").value.trim() || "gpt-image-2";
+  summary.textContent = hasKey ? `已配置 · ${model}` : `未配置 · ${model}`;
+}
+
+function toggleQuickApiPanel() {
+  setQuickApiCollapsed(!$("quickApiPanel").classList.contains("is-collapsed"));
+}
+
+function setQuickApiCollapsed(collapsed) {
+  $("quickApiPanel").classList.toggle("is-collapsed", collapsed);
+  $("quickApiBody").classList.toggle("hidden", collapsed);
+  $("quickApiToggleBtn").setAttribute("aria-expanded", collapsed ? "false" : "true");
 }
 
 function updateModeUI() {

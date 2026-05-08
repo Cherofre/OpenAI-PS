@@ -34,35 +34,32 @@
         </header>
 
         <section id="quickApiPanel" class="quick-api-panel" aria-label="服务配置">
-          <div class="quick-api-copy">
-            <strong>服务配置</strong>
-            <span>支持 OpenAI 兼容接口；Base URL 可带 /v1，路径会自动去重。</span>
-          </div>
-          <div class="quick-api-grid">
-            <label class="quick-field">
-              <span>Base URL</span>
-              <input id="quickBaseUrlInput" type="text" placeholder="https://sub.love-gwen.top/v1" />
-            </label>
-            <label class="quick-field">
-              <span>API Key</span>
-              <input id="quickApiKeyInput" type="password" placeholder="sk-..." />
-            </label>
-            <label class="quick-field">
-              <span>Model</span>
-              <input id="quickModelInput" type="text" placeholder="gpt-image-2" />
-            </label>
-            <label class="quick-field">
-              <span>生成 Path</span>
-              <input id="quickGenerationPathInput" type="text" placeholder="/v1/images/generations" />
-            </label>
-            <label class="quick-field">
-              <span>编辑 Path</span>
-              <input id="quickEditPathInput" type="text" placeholder="/v1/images/edits" />
-            </label>
-          </div>
-          <div class="quick-api-actions">
-            <button id="quickTestConnectionBtn" class="secondary-button compact-button" type="button">测试</button>
-            <button id="quickSaveApiKeyBtn" class="primary-button compact-button" type="button">保存</button>
+          <button id="quickApiToggleBtn" class="quick-api-toggle" type="button" aria-expanded="true" aria-controls="quickApiBody">
+            <span class="quick-api-title">服务配置</span>
+            <span id="quickApiSummary" class="quick-api-summary">未配置</span>
+          </button>
+          <div id="quickApiBody" class="quick-api-body">
+            <div class="quick-api-copy">
+              <span>保存后自动收起；生成和编辑路径按 OpenAI 兼容接口自动处理。</span>
+            </div>
+            <div class="quick-api-grid">
+              <label class="quick-field">
+                <span>Base URL</span>
+                <input id="quickBaseUrlInput" type="text" placeholder="https://sub.love-gwen.top/v1" />
+              </label>
+              <label class="quick-field">
+                <span>API Key</span>
+                <input id="quickApiKeyInput" type="password" placeholder="sk-..." />
+              </label>
+              <label class="quick-field">
+                <span>Model</span>
+                <input id="quickModelInput" type="text" placeholder="gpt-image-2" />
+              </label>
+            </div>
+            <div class="quick-api-actions">
+              <button id="quickTestConnectionBtn" class="secondary-button compact-button" type="button">测试</button>
+              <button id="quickSaveApiKeyBtn" class="primary-button compact-button" type="button">保存</button>
+            </div>
           </div>
         </section>
 
@@ -249,11 +246,8 @@
             <label class="form-field"><span class="field-label">Base URL</span><input id="baseUrlInput" type="text" placeholder="https://sub.love-gwen.top/v1" /></label>
             <label class="form-field"><span class="field-label">API Key</span><div class="input-with-action"><input id="apiKeyInput" type="password" placeholder="sk-..." /><button id="apiKeyVisibilityBtn" class="field-action icon-button" type="button" title="显示 API Key" aria-label="显示 API Key"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.75 12s3.2-5.25 9.25-5.25S21.25 12 21.25 12s-3.2 5.25-9.25 5.25S2.75 12 2.75 12Z" /><circle cx="12" cy="12" r="2.6" /><path d="M4.5 19.5 19.5 4.5" /></svg></button></div></label>
             <label class="form-field"><span class="field-label">Model ID</span><input id="modelInput" type="text" value="gpt-image-2" /></label>
-          </section>
-          <section class="settings-group">
-            <div class="group-title">Endpoints</div>
-            <label class="form-field"><span class="field-label">Image Gen Path</span><input id="generationPathInput" type="text" value="/v1/images/generations" /></label>
-            <label class="form-field"><span class="field-label">Edit Path</span><input id="editPathInput" type="text" value="/v1/images/edits" /></label>
+            <input id="generationPathInput" type="hidden" value="/v1/images/generations" />
+            <input id="editPathInput" type="hidden" value="/v1/images/edits" />
           </section>
         </div>
         <footer class="settings-footer">
