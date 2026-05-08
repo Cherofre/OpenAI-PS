@@ -30,10 +30,10 @@ assert(
 const sendRequestBody = source.match(/async function sendRequest[\s\S]*?\n}\n\nfunction sendXhrRequest/);
 assert(sendRequestBody, "could not locate sendRequest body");
 const abortCheckIndex = sendRequestBody[0].indexOf("isAbortError(fetchError)");
-const xhrFallbackIndex = sendRequestBody[0].indexOf("sendXhrRequest(url, options)");
+const xhrFallbackIndex = sendRequestBody[0].lastIndexOf("catch (xhrError)");
 assert(
   abortCheckIndex !== -1 && xhrFallbackIndex !== -1 && abortCheckIndex < xhrFallbackIndex,
-  "AbortError handling must happen before sendXhrRequest fallback"
+  "AbortError handling must happen before the fetch fallback catches XHR errors"
 );
 
 console.log("network request checks passed");

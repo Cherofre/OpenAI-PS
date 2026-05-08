@@ -20,6 +20,7 @@ const SETTINGS_KEY = "openaiPhotoshop.settings.v1";
 const DEFAULT_BASE_URL = "https://sub.love-gwen.top/v1";
 const MAX_BATCH_COUNT = 10;
 const MAX_REFERENCE_FILES = 16;
+const CLEAR_PROMPT_CONFIRM_MS = 2200;
 const PROMPT_PRESETS = [
   {
     label: "产品质感",
@@ -58,6 +59,7 @@ const state = {
   manualReferenceFiles: [],
   selectedId: null,
   busy: false,
+  clearPromptArmedUntil: 0,
 };
 
 const CRC32_TABLE = createCrc32Table();
@@ -555,12 +557,30 @@ async function readManualReferenceImages() {
       b64: arrayBufferToBase64(buffer),
       mimeType,
       name: file.name || `reference.${mimeToExtension(mimeType)}`,
+      file,
     });
   }
   return images;
 }
 
-function clearPrompts() {
+function clearPrompts(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const hasPromptText = [
+    $("promptInput").value,
+    $("negativePromptInput").value,
+    $("posterTextInput").value,
+  ].some((value) => String(value || "").trim());
+  const now = Date.now();
+  if (hasPromptText && now > state.clearPromptArmedUntil) {
+    state.clearPromptArmedUntil = now + CLEAR_PROMPT_CONFIRM_MS;
+    setStatus("再次点击清空按钮才会清空提示词");
+    return;
+  }
+
+  state.clearPromptArmedUntil = 0;
   $("promptInput").value = "";
   $("negativePromptInput").value = "";
   $("posterTextInput").value = "";
@@ -845,7 +865,6 @@ async function requestEdits(settings, prompt, imageB64, maskB64, options = {}) {
 }
 
 async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = {}) {
-  const form = new FormData();
   const requestSize = options.size || getResolvedRequestSize(settings);
   const extraImages = Array.isArray(options.extraImages) ? options.extraImages : [];
   const imageBytes = estimateBase64Bytes(imageB64);
@@ -856,6 +875,38 @@ async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = 
     throw new Error(`上传图片过大：${formatBytes(uploadBytes)}。请缩小选区或画布后重试`);
   }
 
+  setStatus(maskB64
+    ? `正在上传局部编辑：图像 ${formatBytes(imageBytes)}，Mask ${formatBytes(maskBytes)}`
+    : `正在上传参考图：${formatBytes(imageBytes + extraBytes)}`);
+
+  const url = buildApiUrl(settings.baseUrl, settings.editPath);
+  const requestOptions = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    timeoutMs: getRequestTimeoutMs(settings),
+    preferXhr: true,
+  };
+  const label = maskB64 ? "局部编辑请求" : "参考图编辑请求";
+  let response = await sendRequest(url, {
+    ...requestOptions,
+    body: await createEditFormData(settings, prompt, imageB64, maskB64, extraImages, requestSize, "image"),
+  }, label);
+
+  if (!response.ok && isMissingImageFileError(await cloneResponseJson(response))) {
+    setStatus("图片编辑接口未识别 image 字段，正在用 image[] 兼容模式重试...");
+    response = await sendRequest(url, {
+      ...requestOptions,
+      body: await createEditFormData(settings, prompt, imageB64, maskB64, extraImages, requestSize, "image[]"),
+    }, `${label} image[]`);
+  }
+
+  return parseOpenAIImageResponse(response);
+}
+
+async function createEditFormData(settings, prompt, imageB64, maskB64, extraImages, requestSize, imageFieldName) {
+  const form = new FormData();
   form.append("model", settings.model);
   form.append("prompt", prompt);
   form.append("n", "1");
@@ -864,25 +915,11 @@ async function requestSingleEdit(settings, prompt, imageB64, maskB64, options = 
   }
   appendOptionalImageParameters(form, settings);
   form.append("output_format", settings.format);
-  appendEditImageFiles(form, imageB64, extraImages);
+  await appendEditImageFiles(form, imageB64, extraImages, imageFieldName);
   if (maskB64) {
-    appendMultipartFile(form, "mask", createMultipartImageFile(maskB64, "image/png", "mask.png"), "mask.png");
+    appendMultipartFile(form, "mask", await createMultipartImageFile(maskB64, "image/png", "mask.png"), "mask.png");
   }
-
-  setStatus(maskB64
-    ? `正在上传局部编辑：图像 ${formatBytes(imageBytes)}，Mask ${formatBytes(maskBytes)}`
-    : `正在上传参考图：${formatBytes(imageBytes + extraBytes)}`);
-
-  const response = await sendRequest(buildApiUrl(settings.baseUrl, settings.editPath), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${settings.apiKey}`,
-    },
-    body: form,
-    timeoutMs: getRequestTimeoutMs(settings),
-  }, maskB64 ? "局部编辑请求" : "参考图编辑请求");
-
-  return parseOpenAIImageResponse(response);
+  return form;
 }
 
 async function parseOpenAIImageResponse(response) {
@@ -909,10 +946,18 @@ async function parseOpenAIImageResponse(response) {
 }
 
 async function sendRequest(url, options = {}, label = "请求") {
-  const { responseType, timeoutMs, ...fetchOptions } = options;
+  const { responseType, timeoutMs, preferXhr, ...fetchOptions } = options;
   const controller = timeoutMs > 0 && typeof AbortController !== "undefined" ? new AbortController() : null;
   let timeoutId = null;
   let requestTimedOut = false;
+  if (preferXhr && typeof XMLHttpRequest !== "undefined") {
+    try {
+      return await sendXhrRequest(url, options);
+    } catch (xhrError) {
+      throw makeNetworkError(xhrError, url, label);
+    }
+  }
+
   if (controller) {
     fetchOptions.signal = controller.signal;
     timeoutId = setTimeout(() => {
@@ -978,6 +1023,21 @@ function sendXhrRequest(url, options = {}) {
     xhr.ontimeout = () => reject(new Error("request timeout"));
     xhr.send(options.body || null);
   });
+}
+
+async function cloneResponseJson(response) {
+  try {
+    const text = await response.text();
+    response.text = () => Promise.resolve(text);
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+}
+
+function isMissingImageFileError(json) {
+  const message = String(json?.error?.message || json?.detail || json?.message || "");
+  return /image file is required|image.*required|missing.*image|需要.*(?:image|图片|参考图)/i.test(message);
 }
 
 function makeNetworkError(error, url, label) {
@@ -2002,16 +2062,12 @@ function base64ToBlob(b64, mimeType) {
   return new Blob([base64ToArrayBuffer(stripDataUrl(b64))], { type: mimeType });
 }
 
-function createMultipartImageFile(b64, mimeType, fileName) {
-  const blob = base64ToBlob(b64, mimeType);
-  try {
-    if (typeof File !== "undefined") {
-      return new File([blob], fileName, { type: mimeType });
-    }
-  } catch (error) {
-    console.warn("File wrapper unavailable for multipart upload", error);
-  }
-  return blob;
+async function createMultipartImageFile(b64, mimeType, fileName) {
+  const folder = await fs.getTemporaryFolder();
+  const safeName = String(fileName || `image.${mimeToExtension(mimeType)}`).replace(/[\\/:*?"<>|]/g, "_");
+  const file = await folder.createFile(`openai-upload-${Date.now()}-${safeName}`, { overwrite: true });
+  await file.write(base64ToArrayBuffer(stripDataUrl(b64)), { format: storage.formats.binary });
+  return file;
 }
 
 function appendMultipartFile(form, fieldName, file, fileName) {
@@ -2022,13 +2078,15 @@ function appendMultipartFile(form, fieldName, file, fileName) {
   }
 }
 
-function appendEditImageFiles(form, imageB64, extraImages = []) {
-  appendMultipartFile(form, "image", createMultipartImageFile(imageB64, "image/png", "input.png"), "input.png");
-  extraImages.forEach((image, index) => {
+async function appendEditImageFiles(form, imageB64, extraImages = [], fieldName = "image") {
+  appendMultipartFile(form, fieldName, await createMultipartImageFile(imageB64, "image/png", "input.png"), "input.png");
+  for (let index = 0; index < extraImages.length; index += 1) {
+    const image = extraImages[index];
     const mime = image.mimeType || "image/png";
     const fileName = image.name || `reference-${index + 1}.${mimeToExtension(mime)}`;
-    appendMultipartFile(form, "image", createMultipartImageFile(image.b64, mime, fileName), fileName);
-  });
+    const file = image.file || await createMultipartImageFile(image.b64, mime, fileName);
+    appendMultipartFile(form, fieldName, file, fileName);
+  }
 }
 
 function estimateBase64Bytes(value) {

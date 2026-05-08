@@ -2,14 +2,14 @@
   --surface: #323232;
   --surface-deep: #131313;
   --surface-panel: #252525;
-  --surface-low: #1f2020;
+  --surface-low: #1b1b1b;
   --surface-high: #2a2a2a;
   --surface-raised: #454545;
   --line: #454545;
   --line-soft: #414750;
   --text: #e4e2e1;
-  --text-soft: #c1c7d1;
-  --text-muted: #8e8e8e;
+  --text-soft: #d7dce3;
+  --text-muted: #b8bec7;
   --primary: #0e639c;
   --primary-soft: #99cbff;
   --success: #22c55e;
@@ -53,7 +53,7 @@ button {
 
 button:disabled {
   cursor: default;
-  opacity: 0.45;
+  opacity: 0.62;
 }
 
 input,
@@ -316,7 +316,7 @@ h2 {
   border: 1px solid transparent;
   border-radius: 2px;
   background: transparent;
-  color: #9ca3af;
+  color: var(--text-soft);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -331,7 +331,7 @@ h2 {
 
 .mode-segmented button.is-active {
   background: var(--surface-raised);
-  color: var(--primary);
+  color: var(--primary-soft);
 }
 
 .quick-api-panel {
@@ -477,7 +477,7 @@ h2 {
 .group-title,
 .form-label,
 .field-label {
-  color: #9ca3af;
+  color: var(--text-soft);
   font-size: 11px;
   font-weight: 700;
   line-height: 14px;
@@ -499,6 +499,7 @@ h2 {
   height: 140px;
   min-height: 140px;
   padding: 10px;
+  background: #1b1b1b;
   color: var(--text);
   font-size: 13px;
   line-height: 18px;
@@ -507,6 +508,8 @@ h2 {
 .field-input {
   height: 40px;
   padding: 0 10px;
+  background: #1b1b1b;
+  color: var(--text);
   font-size: 13px;
 }
 
@@ -632,7 +635,7 @@ h2 {
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 2px;
-  background: var(--surface-panel);
+  background: #1b1b1b;
 }
 
 .custom-size-controls .form-field {
@@ -1581,6 +1584,7 @@ h2 {
 .status-text {
   display: inline-block;
   vertical-align: middle;
+  color: var(--text-soft);
 }
 
 /* v0.1.10: tune against Photoshop's actual UXP rendering, not Chrome. */
