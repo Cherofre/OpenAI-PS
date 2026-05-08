@@ -73,17 +73,19 @@
               </div>
             </div>
             <div id="referenceContext" class="mode-context-body hidden">
-              <div class="source-drop-zone">
+              <button id="currentDocumentReferenceBtn" class="source-drop-zone reference-source-button" type="button">
                 <svg class="source-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4.5 6.5h15v11h-15z" />
                   <path d="m7.5 15 3-3 2.2 2.2 2.6-3.4 2.2 4.2" />
                 </svg>
                 <strong>使用当前 Photoshop 文档作为参考图</strong>
                 <span>生成前会自动导出当前画布，作为图片编辑接口的 image 输入。</span>
-              </div>
+              </button>
               <div class="manual-reference-row">
-                <button id="addReferenceFilesBtn" class="mini-button" type="button">添加参考图</button>
-                <button id="clearReferenceFilesBtn" class="mini-button" type="button">清空</button>
+                <div class="manual-reference-actions">
+                  <button id="addReferenceFilesBtn" class="mini-button reference-action-button" type="button">添加参考图</button>
+                  <button id="clearReferenceFilesBtn" class="mini-button reference-action-button" type="button">清空</button>
+                </div>
                 <span id="manualReferenceSummary" class="manual-reference-summary">未添加手动参考图</span>
               </div>
               <label class="context-slider">

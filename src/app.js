@@ -142,6 +142,7 @@ function bindEvents() {
 
   $("useSelectionSizeBtn").addEventListener("click", applySelectionRatioToSize);
   $("matchDocumentBtn").addEventListener("click", applyDocumentPaddingPreset);
+  $("currentDocumentReferenceBtn").addEventListener("click", confirmCurrentDocumentReference);
   $("addReferenceFilesBtn").addEventListener("click", addManualReferenceFiles);
   $("clearReferenceFilesBtn").addEventListener("click", clearManualReferenceFiles);
   $("clearPromptBtn").addEventListener("click", clearPrompts);
@@ -356,6 +357,16 @@ function syncCountUI() {
   const count = clampInteger($("countInput").value, 1, MAX_BATCH_COUNT, 1);
   $("countInput").value = count;
   $("countValue").textContent = String(count);
+}
+
+function confirmCurrentDocumentReference() {
+  if (!app.activeDocument) {
+    setStatus("当前没有打开的 Photoshop 文档");
+    return;
+  }
+
+  const size = getDocumentSize();
+  setStatus(`将使用当前 Photoshop 文档作为参考图：${size.width} x ${size.height}`);
 }
 
 async function addManualReferenceFiles() {
