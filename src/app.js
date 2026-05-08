@@ -413,7 +413,7 @@ function renderPromptPresets() {
     button.type = "button";
     button.textContent = preset.label;
     button.addEventListener("click", () => applyPromptPreset(preset));
-    menu.append(button);
+    menu.appendChild(button);
   });
 }
 
@@ -1472,9 +1472,9 @@ function renderGrid(container, items, isCurrent) {
     };
     image.addEventListener("click", () => selectResult(item, isCurrent));
 
-    tile.append(image);
+    tile.appendChild(image);
     tile.addEventListener("click", () => selectResult(item, isCurrent));
-    container.append(tile);
+    container.appendChild(tile);
   });
 
   fillGridPlaceholders(container, Math.max(0, 6 - items.length), isCurrent ? "results" : "history");
@@ -1502,7 +1502,8 @@ function renderSelectedPreview() {
   meta.className = "selected-preview-meta";
   meta.textContent = `${MODE_META[item.mode]?.label || "结果"} · ${item.size || "auto"} · ${item.format || "png"}`;
 
-  preview.append(image, meta);
+  preview.appendChild(image);
+  preview.appendChild(meta);
   preview.classList.remove("hidden", "is-error");
 }
 
@@ -1513,7 +1514,7 @@ function fillGridPlaceholders(container, count, type) {
     if (type === "history") {
       placeholder.classList.add("is-history");
     }
-    container.append(placeholder);
+    container.appendChild(placeholder);
   }
 }
 
