@@ -912,13 +912,21 @@ async function sendRequest(url, options = {}, label = "请求") {
   const { responseType, timeoutMs, ...fetchOptions } = options;
   const controller = timeoutMs > 0 && typeof AbortController !== "undefined" ? new AbortController() : null;
   let timeoutId = null;
+  let requestTimedOut = false;
   if (controller) {
     fetchOptions.signal = controller.signal;
-    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    timeoutId = setTimeout(() => {
+      requestTimedOut = true;
+      controller.abort();
+    }, timeoutMs);
   }
   try {
     return await fetch(url, fetchOptions);
   } catch (fetchError) {
+    if (requestTimedOut || isAbortError(fetchError)) {
+      throw makeTimeoutError(url, label, timeoutMs);
+    }
+
     if (typeof XMLHttpRequest === "undefined") {
       throw makeNetworkError(fetchError, url, label);
     }
@@ -975,6 +983,16 @@ function sendXhrRequest(url, options = {}) {
 function makeNetworkError(error, url, label) {
   const detail = error?.message || String(error || "Network request failed");
   return new Error(`${label}网络失败：${detail}。地址：${safeUrlForMessage(url)}`);
+}
+
+function makeTimeoutError(url, label, timeoutMs) {
+  const seconds = timeoutMs > 0 ? Math.round(timeoutMs / 1000) : 0;
+  const hint = seconds ? `超过 ${seconds} 秒未完成` : "请求被中止";
+  return new Error(`${label}请求超时：${hint}。地址：${safeUrlForMessage(url)}`);
+}
+
+function isAbortError(error) {
+  return error?.name === "AbortError" || /abort/i.test(error?.message || "");
 }
 
 function safeUrlForMessage(value) {
