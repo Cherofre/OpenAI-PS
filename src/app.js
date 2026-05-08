@@ -20,7 +20,6 @@ const SETTINGS_KEY = "openaiPhotoshop.settings.v1";
 const DEFAULT_BASE_URL = "https://sub.love-gwen.top/v1";
 const MAX_BATCH_COUNT = 10;
 const MAX_REFERENCE_FILES = 16;
-const CLEAR_PROMPT_CONFIRM_MS = 2200;
 const PROMPT_PRESETS = [
   {
     label: "产品质感",
@@ -59,7 +58,6 @@ const state = {
   manualReferenceFiles: [],
   selectedId: null,
   busy: false,
-  clearPromptArmedUntil: 0,
 };
 
 const CRC32_TABLE = createCrc32Table();
@@ -147,7 +145,6 @@ function bindEvents() {
   $("currentDocumentReferenceBtn").addEventListener("click", confirmCurrentDocumentReference);
   $("addReferenceFilesBtn").addEventListener("click", addManualReferenceFiles);
   $("clearReferenceFilesBtn").addEventListener("click", clearManualReferenceFiles);
-  $("clearPromptBtn").addEventListener("click", clearPrompts);
   $("promptPresetBtn").addEventListener("click", togglePresetMenu);
   $("loadHistoryBtn").addEventListener("click", loadHistory);
   $("clearHistoryBtn").addEventListener("click", clearHistory);
@@ -563,31 +560,6 @@ async function readManualReferenceImages() {
   return images;
 }
 
-function clearPrompts(event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  const hasPromptText = [
-    $("promptInput").value,
-    $("negativePromptInput").value,
-    $("posterTextInput").value,
-  ].some((value) => String(value || "").trim());
-  const now = Date.now();
-  if (hasPromptText && now > state.clearPromptArmedUntil) {
-    state.clearPromptArmedUntil = now + CLEAR_PROMPT_CONFIRM_MS;
-    setStatus("再次点击清空按钮才会清空提示词");
-    return;
-  }
-
-  state.clearPromptArmedUntil = 0;
-  $("promptInput").value = "";
-  $("negativePromptInput").value = "";
-  $("posterTextInput").value = "";
-  $("promptPresetMenu").classList.add("hidden");
-  setStatus("提示词已清空");
-}
-
 function renderPromptPresets() {
   const menu = $("promptPresetMenu");
   menu.innerHTML = "";
@@ -756,8 +728,11 @@ async function runGeneration() {
     setProgress(88, true);
     renderResults();
     await Promise.all(stamped.map(saveHistoryItem));
+    const imported = await importGeneratedResult(stamped[0], { manageBusy: false });
     setProgress(100, true);
-    setStatus(`完成：生成 ${stamped.length} 张`);
+    setStatus(imported
+      ? `完成：生成 ${stamped.length} 张，已导入第一张`
+      : `完成：生成 ${stamped.length} 张，但自动导入失败，请点“导入”重试`);
   } catch (error) {
     console.error(error);
     setStatus(`失败：${error.message || error}`);
@@ -1132,8 +1107,15 @@ async function importSelected() {
   const item = getSelectedResult();
   if (!item) return;
 
+  await importGeneratedResult(item);
+}
+
+async function importGeneratedResult(item, options = {}) {
+  if (!item) return false;
+  const shouldManageBusy = options.manageBusy !== false;
+
   try {
-    setBusy(true);
+    if (shouldManageBusy) setBusy(true);
     const shouldForceCapturedSelection = isInpaintResult(item);
     const shouldFit = shouldForceCapturedSelection || $("fitSelectionInput").checked;
     const liveSelection = shouldFit && !shouldForceCapturedSelection && !item.placementRect && !item.targetRect
@@ -1149,11 +1131,13 @@ async function importSelected() {
       : shouldFit ? item.cropRect : null;
     await placeResultAsLayer(item, placementRect, shouldForceCapturedSelection ? "OpenAI Inpaint" : "OpenAI Image", cropRect);
     setStatus(shouldForceCapturedSelection ? "已按生成时选区裁切导入" : "已导入到当前文档");
+    return true;
   } catch (error) {
     console.error(error);
     setStatus(`导入失败：${error.message || error}`);
+    return false;
   } finally {
-    setBusy(false);
+    if (shouldManageBusy) setBusy(false);
   }
 }
 
@@ -1939,9 +1923,18 @@ async function saveHistoryItem(item) {
     };
     const index = readJsonLocal(HISTORY_KEY, []);
     localStorage.setItem(HISTORY_KEY, JSON.stringify([record, ...index].slice(0, 40)));
+    addHistoryRecord({ ...record, b64: arrayBufferToBase64(binary), previewUrl: null });
   } catch (error) {
     console.warn("saveHistoryItem failed", error);
   }
+}
+
+function addHistoryRecord(record) {
+  state.history = [
+    record,
+    ...state.history.filter((item) => item.id !== record.id),
+  ].slice(0, 40);
+  renderHistory();
 }
 
 async function loadHistory() {
@@ -1954,7 +1947,7 @@ async function loadHistory() {
       try {
         const file = await folder.getEntry(record.fileName);
         const buffer = await file.read({ format: storage.formats.binary });
-        loaded.push({ ...record, b64: arrayBufferToBase64(buffer) });
+        loaded.push({ ...record, b64: arrayBufferToBase64(buffer), previewUrl: null });
       } catch (error) {
         console.warn("history entry missing", record.fileName);
       }

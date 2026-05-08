@@ -7,9 +7,9 @@
   --surface-raised: #454545;
   --line: #454545;
   --line-soft: #414750;
-  --text: #e4e2e1;
-  --text-soft: #d7dce3;
-  --text-muted: #b8bec7;
+  --text: #f7f8fa;
+  --text-soft: #edf2f7;
+  --text-muted: #d5dbe4;
   --primary: #0e639c;
   --primary-soft: #99cbff;
   --success: #22c55e;
@@ -605,8 +605,13 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #d1d5db;
+  color: #f2f5f8;
   font-size: 12px;
+}
+
+.checkbox-line,
+.checkbox-line span {
+  color: #f2f5f8;
 }
 
 .checkbox-line input {
@@ -752,6 +757,14 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 2px;
   background: var(--surface-panel);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  color: var(--text-soft);
+  -webkit-text-fill-color: var(--text-soft);
+  opacity: 1;
 }
 
 .manual-reference-row {
@@ -1781,4 +1794,87 @@ h2 {
 
 .parameter-grid .slider-field {
   justify-content: flex-start;
+}
+
+/* v0.1.22: final UXP contrast guard. Photoshop's panel host can inherit
+   disabled and secondary text colors aggressively, so keep labels readable. */
+body,
+button,
+input,
+select,
+textarea {
+  color: var(--text);
+  -webkit-text-fill-color: currentColor;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #c5ccd6;
+  -webkit-text-fill-color: #c5ccd6;
+  opacity: 1;
+}
+
+.section-label,
+.secondary-label,
+.minor-title,
+.group-title,
+.form-label,
+.field-label,
+.quick-field span,
+.quick-api-copy span,
+.quick-api-summary,
+.manual-reference-summary,
+.mode-context-text,
+.custom-size-hint,
+.source-drop-zone span,
+.status-row,
+.settings-status-row,
+.status-text,
+.selected-detail-row,
+.selected-preview-meta,
+.empty-state,
+.version-inline {
+  color: var(--text-soft);
+  -webkit-text-fill-color: var(--text-soft);
+  opacity: 1;
+}
+
+.mode-segmented button,
+.output-tabs button,
+.mini-button,
+.secondary-button,
+.ghost-button,
+.preset-menu button,
+.tool-icon-button,
+.icon-button,
+.field-action {
+  color: var(--text-soft);
+  -webkit-text-fill-color: var(--text-soft);
+  opacity: 1;
+}
+
+.mode-segmented button.is-active,
+.output-tabs button.is-active,
+.quick-api-title {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.checkbox-line,
+.checkbox-line span,
+.context-slider,
+.context-slider .form-label,
+.context-slider .form-label strong {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  opacity: 1;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+  color: var(--text-soft);
+  -webkit-text-fill-color: var(--text-soft);
+  opacity: 0.92;
 }

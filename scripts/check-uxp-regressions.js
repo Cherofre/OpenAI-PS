@@ -29,9 +29,10 @@ assert(
   "edits requests should have an image[] fallback for compatible third-party APIs"
 );
 assert(
-  appSource.includes("CLEAR_PROMPT_CONFIRM_MS") &&
-    /function clearPrompts\(event\)/.test(appSource),
-  "clear prompt should require a guarded second click to prevent accidental clears"
+  !appSource.includes("CLEAR_PROMPT_CONFIRM_MS") &&
+    !appSource.includes("clearPromptArmedUntil") &&
+    !/function clearPrompts\(event\)/.test(appSource),
+  "clear prompt logic should be removed so focusing the prompt cannot clear text"
 );
 assert(
   /--text-muted:\s*#[a-fA-F0-9]{6};/.test(stylesSource) &&
