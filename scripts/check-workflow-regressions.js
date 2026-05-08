@@ -26,8 +26,16 @@ assert(
 );
 assert(
   /const imported = await importGeneratedResult\(stamped\[0\], \{ manageBusy: false \}\)/.test(js) &&
-    /自动导入失败/.test(js),
+    /自动导入失败/.test(js) &&
+    /showPluginAlert/.test(js),
   "generation should automatically import the first result into Photoshop and report import failure honestly"
+);
+assert(
+  /async function placeFileAsLayer\(/.test(js) &&
+    /async function duplicateResultFileAsLayer\(/.test(js) &&
+    /sourceDocument = await app\.open\(file\)/.test(js) &&
+    /duplicateLayers\(sourceLayers, targetDocument\)/.test(js),
+  "Photoshop import should fall back from placeEvent to opening and duplicating a result layer"
 );
 assert(
   /addHistoryRecord\(record\)/.test(js),

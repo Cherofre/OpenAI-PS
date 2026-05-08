@@ -1181,6 +1181,7 @@ async function importSelected() {
 async function importGeneratedResult(item, options = {}) {
   if (!item) return false;
   const shouldManageBusy = options.manageBusy !== false;
+  const shouldAlertOnFailure = options.alertOnFailure !== false;
 
   try {
     if (shouldManageBusy) setBusy(true);
@@ -1203,6 +1204,9 @@ async function importGeneratedResult(item, options = {}) {
   } catch (error) {
     console.error(error);
     setStatus(`导入失败：${error.message || error}`);
+    if (shouldAlertOnFailure) {
+      await showPluginAlert(`导入 Photoshop 图层失败：\n${error.message || error}`);
+    }
     return false;
   } finally {
     if (shouldManageBusy) setBusy(false);
@@ -1219,6 +1223,43 @@ async function placeResultAsLayer(item, selectionInfo, layerName, cropRect = nul
   const format = item.format || detectFormatFromResult(item) || "png";
   const imageSize = getPngSize(binary) || { width: 1024, height: 1024 };
 
+  const targetDocument = await ensureTargetDocument(imageSize);
+
+  const folder = await fs.getTemporaryFolder();
+  const extension = ["png", "jpeg", "jpg", "webp"].includes(format) ? format : "png";
+  const file = await folder.createFile(`openai_result.${extension}`, { overwrite: true });
+  await file.write(binary, { format: storage.formats.binary });
+  const beforeLayerCount = getDocumentLayerCount(targetDocument);
+
+  let importedLayer = null;
+  let placeError = null;
+  try {
+    importedLayer = await placeFileAsLayer(file, targetDocument, beforeLayerCount, layerName);
+  } catch (error) {
+    placeError = error;
+    console.warn("placeEvent import failed; falling back to duplicateLayers", error);
+  }
+
+  if (!importedLayer) {
+    importedLayer = await duplicateResultFileAsLayer(file, targetDocument, layerName, placeError);
+  }
+
+  if (!importedLayer) {
+    throw new Error("Photoshop 没有创建新图层");
+  }
+
+  await selectLayerById(importedLayer.id);
+
+  if (isSelectionValid(selectionInfo) && importedLayer) {
+    await transformLayerToRect(importedLayer, selectionInfo);
+  }
+
+  if (isSelectionValid(cropRect) && importedLayer) {
+    await applyRectMaskToLayer(importedLayer, cropRect);
+  }
+}
+
+async function ensureTargetDocument(imageSize) {
   if (!app.activeDocument) {
     await core.executeAsModal(async () => {
       await app.documents.add({
@@ -1230,14 +1271,12 @@ async function placeResultAsLayer(item, selectionInfo, layerName, cropRect = nul
       });
     }, { commandName: "Create OpenAI document" });
   }
+  return app.activeDocument;
+}
 
-  const folder = await fs.getTemporaryFolder();
-  const extension = ["png", "jpeg", "jpg", "webp"].includes(format) ? format : "png";
-  const file = await folder.createFile(`openai_result.${extension}`, { overwrite: true });
-  await file.write(binary, { format: storage.formats.binary });
+async function placeFileAsLayer(file, targetDocument, beforeLayerCount, layerName) {
   const token = await fs.createSessionToken(file);
-
-  let importedLayer;
+  let importedLayer = null;
   await core.executeAsModal(async () => {
     await action.batchPlay([
       {
@@ -1255,17 +1294,85 @@ async function placeResultAsLayer(item, selectionInfo, layerName, cropRect = nul
         _options: { dialogOptions: "dontDisplay" },
       },
     ], { modalBehavior: "execute" });
-    importedLayer = app.activeDocument.activeLayers[0];
+    importedLayer = getNewActiveLayer(targetDocument, beforeLayerCount);
+    if (!importedLayer) {
+      throw new Error("placeEvent 执行后没有新增图层");
+    }
     importedLayer.name = layerName;
   }, { commandName: "Place OpenAI image" });
+  return importedLayer;
+}
 
-  if (isSelectionValid(selectionInfo) && importedLayer) {
-    await transformLayerToRect(importedLayer, selectionInfo);
+async function duplicateResultFileAsLayer(file, targetDocument, layerName, placeError) {
+  let sourceDocument = null;
+  let copiedLayers = [];
+  try {
+    await core.executeAsModal(async () => {
+      sourceDocument = await app.open(file);
+      const sourceLayers = getSourceLayersForDuplicate(sourceDocument);
+      if (!sourceLayers.length) {
+        throw new Error("临时结果文档没有可复制图层");
+      }
+      copiedLayers = await sourceDocument.duplicateLayers(sourceLayers, targetDocument);
+      if (!copiedLayers.length) {
+        throw new Error("duplicateLayers 没有返回新图层");
+      }
+      copiedLayers[0].name = layerName;
+      sourceDocument.closeWithoutSaving();
+      sourceDocument = null;
+    }, { commandName: "Duplicate OpenAI image layer" });
+  } catch (error) {
+    if (sourceDocument) {
+      try {
+        sourceDocument.closeWithoutSaving();
+      } catch (closeError) {
+        console.warn("Failed to close temporary result document", closeError);
+      }
+    }
+    const prefix = placeError ? `placeEvent 失败：${placeError.message || placeError}；` : "";
+    throw new Error(`${prefix}备用导入也失败：${error.message || error}`);
   }
+  return copiedLayers[0] || null;
+}
 
-  if (isSelectionValid(cropRect) && importedLayer) {
-    await applyRectMaskToLayer(importedLayer, cropRect);
+function getSourceLayersForDuplicate(document) {
+  if (!document) return [];
+  if (document.activeLayers && document.activeLayers.length) return document.activeLayers;
+  if (document.layers && document.layers.length) return [document.layers[0]];
+  if (document.layerTree && document.layerTree.length) return [document.layerTree[0]];
+  return [];
+}
+
+function getDocumentLayerCount(document) {
+  if (!document) return 0;
+  if (document.layers) return document.layers.length;
+  if (document.layerTree) return document.layerTree.length;
+  return 0;
+}
+
+function getNewActiveLayer(document, beforeLayerCount) {
+  if (!document) return null;
+  const layers = document.layers || [];
+  const activeLayer = document.activeLayers && document.activeLayers[0];
+  if (layers.length <= beforeLayerCount) return null;
+  if (activeLayer && layers.some((layer) => layer.id === activeLayer.id)) {
+    return activeLayer;
   }
+  return layers[0] || null;
+}
+
+async function selectLayerById(layerId) {
+  if (!layerId) return;
+  await core.executeAsModal(async () => {
+    await action.batchPlay([
+      {
+        _obj: "select",
+        _target: [{ _id: layerId, _ref: "layer" }],
+        makeVisible: false,
+        _options: { dialogOptions: "dontDisplay" },
+      },
+    ], { modalBehavior: "execute" });
+  }, { commandName: "Select OpenAI image layer" });
 }
 
 async function resultToArrayBuffer(item) {
@@ -2093,6 +2200,26 @@ function setStatus(message) {
   const settingsDot = $("settingsStatusDot");
   if (settingsDot) {
     settingsDot.className = $("statusDot").className;
+  }
+}
+
+async function showPluginAlert(message) {
+  const text = String(message || "操作失败");
+  try {
+    if (core && typeof core.showAlert === "function") {
+      await core.showAlert(text);
+      return;
+    }
+  } catch (error) {
+    console.warn("core.showAlert failed", error);
+  }
+
+  try {
+    if (typeof window !== "undefined" && typeof window.alert === "function") {
+      window.alert(text);
+    }
+  } catch (error) {
+    console.warn("window.alert failed", error);
   }
 }
 
