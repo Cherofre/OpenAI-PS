@@ -100,16 +100,6 @@ function bindEvents() {
       setOpenAiPsMode(event.currentTarget.getAttribute("data-mode"));
     });
   });
-  ["modeSelect", "modeSelectMain"].forEach((id) => {
-    const select = $(id);
-    if (!select) return;
-    ["change", "input"].forEach((eventName) => {
-      select.addEventListener(eventName, (event) => {
-        setOpenAiPsMode(event.target.value);
-      });
-    });
-  });
-
   document.querySelectorAll("#outputTabs [data-output]").forEach((button) => {
     button.addEventListener("click", (event) => {
       state.outputView = event.currentTarget.getAttribute("data-output");
@@ -119,10 +109,19 @@ function bindEvents() {
 
   $("settingsToggleBtn").addEventListener("click", openSettingsView);
   $("settingsBackBtn").addEventListener("click", closeSettingsView);
-  $("quickSaveApiKeyBtn").addEventListener("click", saveQuickApiKey);
-  $("quickApiKeyInput").addEventListener("input", () => {
-    $("apiKeyInput").value = $("quickApiKeyInput").value;
-    updateKeyBadge();
+  $("quickSaveApiKeyBtn").addEventListener("click", saveQuickSettings);
+  $("quickTestConnectionBtn").addEventListener("click", testConnection);
+  [
+    ["quickBaseUrlInput", "baseUrlInput"],
+    ["quickApiKeyInput", "apiKeyInput"],
+    ["quickModelInput", "modelInput"],
+    ["quickGenerationPathInput", "generationPathInput"],
+    ["quickEditPathInput", "editPathInput"],
+  ].forEach(([quickId, settingsId]) => {
+    $(quickId).addEventListener("input", () => {
+      $(settingsId).value = $(quickId).value;
+      updateKeyBadge();
+    });
   });
 
   $("saveSettingsBtn").addEventListener("click", () => {
@@ -185,10 +184,14 @@ function loadSettings() {
   settings.baseUrl = normalizeBaseUrl(settings.baseUrl);
   $("baseUrlInput").value = settings.baseUrl;
   $("apiKeyInput").value = settings.apiKey;
+  $("quickBaseUrlInput").value = settings.baseUrl;
   $("quickApiKeyInput").value = settings.apiKey;
   $("modelInput").value = settings.model;
+  $("quickModelInput").value = settings.model;
   $("generationPathInput").value = settings.generationPath;
+  $("quickGenerationPathInput").value = settings.generationPath;
   $("editPathInput").value = settings.editPath;
+  $("quickEditPathInput").value = settings.editPath;
   $("sizeInput").value = settings.size;
   $("qualityInput").value = settings.quality;
   $("countInput").value = clampInteger(settings.count, 1, MAX_BATCH_COUNT, 1);
@@ -199,19 +202,22 @@ function saveSettings() {
   const settings = getSettings();
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   $("baseUrlInput").value = settings.baseUrl;
+  $("quickBaseUrlInput").value = settings.baseUrl;
+  $("quickApiKeyInput").value = settings.apiKey;
+  $("quickModelInput").value = settings.model;
+  $("quickGenerationPathInput").value = settings.generationPath;
+  $("quickEditPathInput").value = settings.editPath;
   updateKeyBadge();
 }
 
-function saveQuickApiKey() {
-  const value = $("quickApiKeyInput").value.trim();
-  $("apiKeyInput").value = value;
-  if (!value) {
-    setStatus("请先填写 OpenAI API Key");
-    updateKeyBadge();
-    return;
-  }
+function saveQuickSettings() {
+  $("baseUrlInput").value = $("quickBaseUrlInput").value;
+  $("apiKeyInput").value = $("quickApiKeyInput").value;
+  $("modelInput").value = $("quickModelInput").value;
+  $("generationPathInput").value = $("quickGenerationPathInput").value;
+  $("editPathInput").value = $("quickEditPathInput").value;
   saveSettings();
-  setStatus("API Key 已保存");
+  setStatus($("apiKeyInput").value.trim() ? "服务配置已保存" : "服务配置已保存，未填写 API Key");
 }
 
 function getSettings() {
@@ -235,7 +241,6 @@ function updateKeyBadge() {
   dot.classList.toggle("is-ok", hasKey);
   dot.classList.toggle("is-off", !hasKey);
   dot.title = hasKey ? "已配置 API Key" : "未配置 API Key";
-  $("quickApiPanel").classList.toggle("hidden", hasKey);
   $("quickApiKeyInput").value = $("apiKeyInput").value;
 }
 
@@ -243,12 +248,6 @@ function updateModeUI() {
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.classList.toggle("is-active", button.getAttribute("data-mode") === state.mode);
   });
-  if ($("modeSelect")) {
-    $("modeSelect").value = state.mode;
-  }
-  if ($("modeSelectMain")) {
-    $("modeSelectMain").value = state.mode;
-  }
 
   $("outpaintControls").classList.toggle("hidden", state.mode !== "outpaint");
   $("sizeField").classList.toggle("hidden", state.mode === "inpaint");
@@ -1635,6 +1634,8 @@ function setBusy(busy) {
   $("generateBtn").disabled = busy;
   $("importSelectedBtn").disabled = busy || !state.selectedId;
   $("clearResultsBtn").disabled = busy;
+  $("quickSaveApiKeyBtn").disabled = busy;
+  $("quickTestConnectionBtn").disabled = busy;
   $("saveSettingsBtn").disabled = busy;
   $("testConnectionBtn").disabled = busy;
   $("generateBtnLabel").textContent = busy ? "生成中..." : "生成";
@@ -1989,6 +1990,9 @@ function normalizeBaseUrl(value) {
 
 function normalizePath(value) {
   let path = String(value || "");
+  if (/^https?:\/\//i.test(path)) {
+    return path.trim();
+  }
   if (path.startsWith("/images/")) {
     path = `/v1${path}`;
   }
@@ -1996,7 +2000,15 @@ function normalizePath(value) {
 }
 
 function buildApiUrl(baseUrl, path) {
-  return `${normalizeBaseUrl(baseUrl)}${normalizePath(path)}`;
+  let endpoint = normalizePath(path);
+  if (/^https?:\/\//i.test(endpoint)) {
+    return endpoint;
+  }
+  const base = normalizeBaseUrl(baseUrl);
+  if (/\/v1$/i.test(base) && /^\/v1(?:\/|$)/i.test(endpoint)) {
+    endpoint = endpoint.replace(/^\/v1/i, "");
+  }
+  return `${base}${endpoint}`;
 }
 
 function readJsonLocal(key, fallback) {

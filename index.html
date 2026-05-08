@@ -31,43 +31,42 @@
             <button type="button" data-mode="inpaint" onclick="window.setOpenAiPsMode && window.setOpenAiPsMode('inpaint')">选区重绘</button>
             <button type="button" data-mode="outpaint" onclick="window.setOpenAiPsMode && window.setOpenAiPsMode('outpaint')">扩图</button>
           </nav>
-          <label class="mode-fallback-select" for="modeSelect">
-            <span>模式</span>
-            <select id="modeSelect" onchange="window.setOpenAiPsMode && window.setOpenAiPsMode(this.value)">
-              <option value="generate">文生图</option>
-              <option value="reference">参考图</option>
-              <option value="inpaint">选区重绘</option>
-              <option value="outpaint">扩图</option>
-            </select>
-          </label>
         </header>
 
-        <section id="quickApiPanel" class="quick-api-panel hidden" aria-label="快速 API Key 设置">
+        <section id="quickApiPanel" class="quick-api-panel" aria-label="服务配置">
           <div class="quick-api-copy">
-            <strong>先填写 OpenAI API Key</strong>
-            <span>保存后即可直接生成；Base URL、模型和路径可在 API 设置里调整。</span>
+            <strong>服务配置</strong>
+            <span>支持 OpenAI 兼容接口；Base URL 可带 /v1，路径会自动去重。</span>
           </div>
-          <div class="quick-api-row">
-            <input id="quickApiKeyInput" type="password" placeholder="sk-..." />
-            <button id="quickSaveApiKeyBtn" class="secondary-button compact-button" type="button">保存</button>
+          <div class="quick-api-grid">
+            <label class="quick-field">
+              <span>Base URL</span>
+              <input id="quickBaseUrlInput" type="text" placeholder="https://sub.love-gwen.top/v1" />
+            </label>
+            <label class="quick-field">
+              <span>API Key</span>
+              <input id="quickApiKeyInput" type="password" placeholder="sk-..." />
+            </label>
+            <label class="quick-field">
+              <span>Model</span>
+              <input id="quickModelInput" type="text" placeholder="gpt-image-2" />
+            </label>
+            <label class="quick-field">
+              <span>生成 Path</span>
+              <input id="quickGenerationPathInput" type="text" placeholder="/v1/images/generations" />
+            </label>
+            <label class="quick-field">
+              <span>编辑 Path</span>
+              <input id="quickEditPathInput" type="text" placeholder="/v1/images/edits" />
+            </label>
+          </div>
+          <div class="quick-api-actions">
+            <button id="quickTestConnectionBtn" class="secondary-button compact-button" type="button">测试</button>
+            <button id="quickSaveApiKeyBtn" class="primary-button compact-button" type="button">保存</button>
           </div>
         </section>
 
         <div class="workspace-scroll">
-          <section class="section-block mode-switch-panel">
-            <label class="form-field">
-              <span class="form-label">模式</span>
-              <div class="select-wrap">
-                <select id="modeSelectMain" onchange="window.setOpenAiPsMode && window.setOpenAiPsMode(this.value)">
-                  <option value="generate">文生图</option>
-                  <option value="reference">参考图</option>
-                  <option value="inpaint">选区重绘</option>
-                  <option value="outpaint">扩图</option>
-                </select>
-              </div>
-            </label>
-          </section>
-
           <section id="modeContextPanel" class="section-block mode-context-panel hidden">
             <div class="mode-context-head">
               <span id="modeContextIcon" class="mode-context-icon">✦</span>
