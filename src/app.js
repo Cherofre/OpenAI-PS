@@ -400,11 +400,70 @@ function renderManualReferenceSummary() {
   if (!summary) return;
   if (!state.manualReferenceFiles.length) {
     summary.textContent = "未添加手动参考图";
+    renderManualReferencePreview();
     return;
   }
   const names = state.manualReferenceFiles.slice(0, 2).map((file) => file.name || "image").join(", ");
   const suffix = state.manualReferenceFiles.length > 2 ? ` +${state.manualReferenceFiles.length - 2}` : "";
   summary.textContent = `${state.manualReferenceFiles.length} 张：${names}${suffix}`;
+  renderManualReferencePreview();
+}
+
+async function renderManualReferencePreview() {
+  const container = $("manualReferencePreview");
+  if (!container) return;
+  container.innerHTML = "";
+  container.classList.toggle("has-items", state.manualReferenceFiles.length > 0);
+
+  state.manualReferenceFiles.forEach((file, index) => {
+    const item = document.createElement("div");
+    item.className = "manual-reference-item";
+
+    const image = document.createElement("img");
+    image.alt = file.name || `参考图 ${index + 1}`;
+    image.title = file.name || image.alt;
+    image.src = "";
+    image.onerror = () => {
+      item.classList.add("is-error");
+      image.alt = "参考图预览失败";
+    };
+    readReferenceFileAsDataUrl(file).then((src) => {
+      image.src = src;
+    }).catch((error) => {
+      console.warn("reference preview failed", error);
+      item.classList.add("is-error");
+    });
+
+    const indexBadge = document.createElement("span");
+    indexBadge.className = "manual-reference-index";
+    indexBadge.textContent = String(index + 1);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "manual-reference-remove";
+    remove.title = `移除 ${file.name || `参考图 ${index + 1}`}`;
+    remove.setAttribute("aria-label", remove.title);
+    remove.textContent = "x";
+    remove.addEventListener("click", () => removeManualReferenceFile(index));
+
+    item.appendChild(image);
+    item.appendChild(indexBadge);
+    item.appendChild(remove);
+    container.appendChild(item);
+  });
+}
+
+function removeManualReferenceFile(index) {
+  if (index < 0 || index >= state.manualReferenceFiles.length) return;
+  const [removed] = state.manualReferenceFiles.splice(index, 1);
+  renderManualReferenceSummary();
+  setStatus(`已移除参考图：${removed?.name || index + 1}`);
+}
+
+async function readReferenceFileAsDataUrl(file) {
+  const buffer = await file.read({ format: storage.formats.binary });
+  const mimeType = guessMimeType(file.name || "");
+  return `data:${mimeType};base64,${arrayBufferToBase64(buffer)}`;
 }
 
 async function readManualReferenceImages() {
