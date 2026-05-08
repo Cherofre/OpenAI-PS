@@ -110,6 +110,7 @@ function bindEvents() {
   $("settingsToggleBtn").addEventListener("click", openSettingsView);
   $("settingsBackBtn").addEventListener("click", closeSettingsView);
   $("quickApiToggleBtn").addEventListener("click", toggleQuickApiPanel);
+  $("quickAdvancedToggleBtn").addEventListener("click", toggleQuickAdvancedFields);
   $("quickSaveApiKeyBtn").addEventListener("click", saveQuickSettings);
   $("quickTestConnectionBtn").addEventListener("click", testConnection);
   [
@@ -156,6 +157,7 @@ function bindEvents() {
   $("customWidthInput").addEventListener("input", syncCustomSizeUI);
   $("customHeightInput").addEventListener("input", syncCustomSizeUI);
   $("apiKeyInput").addEventListener("input", updateKeyBadge);
+  bindInputValueGuards();
 
   document.addEventListener("click", (event) => {
     const menu = $("promptPresetMenu");
@@ -214,6 +216,7 @@ function loadSettings() {
   $("customWidthInput").value = clampInteger(settings.customWidth, 16, 3840, 1536);
   $("customHeightInput").value = clampInteger(settings.customHeight, 16, 3840, 864);
   syncCustomSizeUI();
+  rememberAllInputValues();
 }
 
 function saveSettings() {
@@ -224,6 +227,7 @@ function saveSettings() {
   $("quickApiKeyInput").value = settings.apiKey;
   $("quickModelInput").value = settings.model;
   updateKeyBadge();
+  rememberAllInputValues();
 }
 
 function saveQuickSettings() {
@@ -283,6 +287,18 @@ function setQuickApiCollapsed(collapsed) {
   $("quickApiPanel").classList.toggle("is-collapsed", collapsed);
   $("quickApiBody").classList.toggle("hidden", collapsed);
   $("quickApiToggleBtn").setAttribute("aria-expanded", collapsed ? "false" : "true");
+  if (collapsed) {
+    setQuickAdvancedCollapsed(true);
+  }
+}
+
+function toggleQuickAdvancedFields() {
+  setQuickAdvancedCollapsed(!$("quickAdvancedFields").classList.contains("hidden"));
+}
+
+function setQuickAdvancedCollapsed(collapsed) {
+  $("quickAdvancedFields").classList.toggle("hidden", collapsed);
+  $("quickAdvancedToggleBtn").setAttribute("aria-expanded", collapsed ? "false" : "true");
 }
 
 function updateModeUI() {
@@ -581,8 +597,60 @@ function applyPromptPreset(preset) {
   if (!$("negativePromptInput").value.trim()) {
     $("negativePromptInput").value = preset.negative || "";
   }
+  rememberAllInputValues();
   $("promptPresetMenu").classList.add("hidden");
   setStatus(`已应用模板：${preset.label}`);
+}
+
+function bindInputValueGuards() {
+  getGuardedInputIds().forEach((id) => {
+    const input = $(id);
+    if (!input) return;
+    input.dataset.lastStableValue = input.value || "";
+    input.addEventListener("focus", () => {
+      input.dataset.focusValue = input.value || "";
+      window.setTimeout(() => restoreUnexpectedFocusClear(input), 0);
+      window.setTimeout(() => restoreUnexpectedFocusClear(input), 40);
+    });
+    input.addEventListener("input", () => {
+      input.dataset.lastStableValue = input.value || "";
+    });
+    input.addEventListener("change", () => {
+      input.dataset.lastStableValue = input.value || "";
+    });
+    input.addEventListener("blur", () => {
+      input.dataset.lastStableValue = input.value || "";
+    });
+  });
+}
+
+function restoreUnexpectedFocusClear(input) {
+  const beforeFocus = input.dataset.focusValue || "";
+  if (beforeFocus && !input.value && document.activeElement === input) {
+    input.value = beforeFocus;
+    input.dataset.lastStableValue = beforeFocus;
+  }
+}
+
+function rememberAllInputValues() {
+  getGuardedInputIds().forEach((id) => {
+    const input = $(id);
+    if (input) input.dataset.lastStableValue = input.value || "";
+  });
+}
+
+function getGuardedInputIds() {
+  return [
+    "promptInput",
+    "negativePromptInput",
+    "posterTextInput",
+    "quickApiKeyInput",
+    "quickModelInput",
+    "quickBaseUrlInput",
+    "apiKeyInput",
+    "modelInput",
+    "baseUrlInput",
+  ];
 }
 
 async function testConnection() {

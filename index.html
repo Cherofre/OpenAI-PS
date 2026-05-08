@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenAI 图片</title>
-    <link rel="stylesheet" href="./src/styles.css?v=0.1.22" />
-    <script src="./src/app.js?v=0.1.22" defer></script>
+    <link rel="stylesheet" href="./src/styles.css?v=0.1.23" />
+    <script src="./src/app.js?v=0.1.23" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -15,7 +15,7 @@
             <div class="title-inline">
               <span id="connectionBadge" class="connection-dot" aria-hidden="true" title="未配置 API Key"></span>
               <h1>OpenAI 图片</h1>
-              <span id="versionText" class="version-inline">v0.1.22</span>
+              <span id="versionText" class="version-inline">v0.1.23</span>
             </div>
             <button id="settingsToggleBtn" class="icon-button settings-entry-button" type="button" title="打开 API 设置" aria-label="打开 API 设置">
               <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,13 +40,9 @@
           </button>
           <div id="quickApiBody" class="quick-api-body">
             <div class="quick-api-copy">
-              <span>保存后自动收起；生成和编辑路径按 OpenAI 兼容接口自动处理。</span>
+              <span>保存后自动收起；服务地址走自动兼容路径，需要时展开高级项。</span>
             </div>
             <div class="quick-api-grid">
-              <label class="quick-field">
-                <span>Base URL</span>
-                <input id="quickBaseUrlInput" type="text" placeholder="https://sub.love-gwen.top/v1" />
-              </label>
               <label class="quick-field">
                 <span>API Key</span>
                 <input id="quickApiKeyInput" type="password" placeholder="sk-..." />
@@ -54,6 +50,13 @@
               <label class="quick-field">
                 <span>Model</span>
                 <input id="quickModelInput" type="text" placeholder="gpt-image-2" />
+              </label>
+            </div>
+            <button id="quickAdvancedToggleBtn" class="quick-advanced-toggle" type="button" aria-expanded="false" aria-controls="quickAdvancedFields">高级连接</button>
+            <div id="quickAdvancedFields" class="quick-advanced-fields hidden">
+              <label class="quick-field">
+                <span>Base URL</span>
+                <input id="quickBaseUrlInput" type="text" placeholder="默认服务地址" />
               </label>
             </div>
             <div class="quick-api-actions">
@@ -286,7 +289,7 @@
       <section id="settingsView" class="settings-view hidden">
         <header class="settings-header">
           <button id="settingsBackBtn" class="icon-button back-button" type="button" title="返回" aria-label="返回"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" /></svg></button>
-          <div class="settings-title"><h2>服务设置</h2><span class="version-inline">v0.1.22</span></div>
+          <div class="settings-title"><h2>服务设置</h2><span class="version-inline">v0.1.23</span></div>
         </header>
         <div class="settings-scroll">
           <section class="settings-group">
