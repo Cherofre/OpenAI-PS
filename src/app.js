@@ -111,6 +111,8 @@ function bindEvents() {
   $("settingsBackBtn").addEventListener("click", closeSettingsView);
   $("quickApiToggleBtn").addEventListener("click", toggleQuickApiPanel);
   $("quickAdvancedToggleBtn").addEventListener("click", toggleQuickAdvancedFields);
+  $("promptOptionsToggleBtn").addEventListener("click", togglePromptOptions);
+  $("parameterToggleBtn").addEventListener("click", toggleParameterPanel);
   $("quickSaveApiKeyBtn").addEventListener("click", saveQuickSettings);
   $("quickTestConnectionBtn").addEventListener("click", testConnection);
   [
@@ -156,6 +158,14 @@ function bindEvents() {
   $("sizeInput").addEventListener("change", syncCustomSizeUI);
   $("customWidthInput").addEventListener("input", syncCustomSizeUI);
   $("customHeightInput").addEventListener("input", syncCustomSizeUI);
+  $("qualityInput").addEventListener("change", updatePanelSummaries);
+  $("formatInput").addEventListener("change", updatePanelSummaries);
+  $("seedInput").addEventListener("input", updatePanelSummaries);
+  $("stylePresetInput").addEventListener("change", updatePanelSummaries);
+  $("timeoutInput").addEventListener("input", updatePanelSummaries);
+  $("infiniteTimeoutInput").addEventListener("change", updatePanelSummaries);
+  $("negativePromptInput").addEventListener("input", updatePanelSummaries);
+  $("posterTextInput").addEventListener("input", updatePanelSummaries);
   $("apiKeyInput").addEventListener("input", updateKeyBadge);
   bindInputValueGuards();
 
@@ -217,6 +227,7 @@ function loadSettings() {
   $("customHeightInput").value = clampInteger(settings.customHeight, 16, 3840, 864);
   syncCustomSizeUI();
   rememberAllInputValues();
+  updatePanelSummaries();
 }
 
 function saveSettings() {
@@ -228,6 +239,7 @@ function saveSettings() {
   $("quickModelInput").value = settings.model;
   updateKeyBadge();
   rememberAllInputValues();
+  updatePanelSummaries();
 }
 
 function saveQuickSettings() {
@@ -299,6 +311,42 @@ function toggleQuickAdvancedFields() {
 function setQuickAdvancedCollapsed(collapsed) {
   $("quickAdvancedFields").classList.toggle("hidden", collapsed);
   $("quickAdvancedToggleBtn").setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
+function togglePromptOptions() {
+  setPromptOptionsCollapsed(!$("promptOptionsBody").classList.contains("hidden"));
+}
+
+function setPromptOptionsCollapsed(collapsed) {
+  $("promptOptionsBody").classList.toggle("hidden", collapsed);
+  $("promptOptionsToggleBtn").setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
+function toggleParameterPanel() {
+  setParameterPanelCollapsed(!$("parameterBody").classList.contains("hidden"));
+}
+
+function setParameterPanelCollapsed(collapsed) {
+  $("parameterBody").classList.toggle("hidden", collapsed);
+  $("parameterToggleBtn").setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
+function updatePanelSummaries() {
+  const negative = $("negativePromptInput").value.trim();
+  const poster = $("posterTextInput").value.trim();
+  const optionBits = [];
+  if (negative) optionBits.push("反向");
+  if (poster) optionBits.push("文字");
+  $("promptOptionsSummary").textContent = optionBits.length ? optionBits.join(" · ") : "可选";
+
+  const settings = getSettings();
+  const size = getResolvedRequestSize(settings);
+  const sizeLabel = size === "auto" ? "自动尺寸" : size;
+  const qualityLabel = settings.quality === "auto" ? "自动质量" : settings.quality;
+  const extras = [];
+  if (settings.seed >= 0) extras.push(`seed ${settings.seed}`);
+  if (settings.stylePreset && settings.stylePreset !== "none") extras.push(settings.stylePreset);
+  $("parameterSummary").textContent = [sizeLabel, qualityLabel, `${settings.count} 张`, ...extras].join(" · ");
 }
 
 function updateModeUI() {
@@ -400,6 +448,7 @@ function syncCountUI() {
   const count = clampInteger($("countInput").value, 1, MAX_BATCH_COUNT, 1);
   $("countInput").value = count;
   $("countValue").textContent = String(count);
+  updatePanelSummaries();
 }
 
 function syncCustomSizeUI() {
@@ -408,6 +457,7 @@ function syncCustomSizeUI() {
   const validation = validateCustomSize($("customWidthInput").value, $("customHeightInput").value);
   $("customSizeHint").textContent = enabled ? validation.message : "选择自定义尺寸后生效。";
   $("customSizeHint").classList.toggle("is-invalid", enabled && !validation.ok);
+  updatePanelSummaries();
 }
 
 function validateCustomSize(widthValue, heightValue) {
@@ -598,6 +648,7 @@ function applyPromptPreset(preset) {
     $("negativePromptInput").value = preset.negative || "";
   }
   rememberAllInputValues();
+  updatePanelSummaries();
   $("promptPresetMenu").classList.add("hidden");
   setStatus(`已应用模板：${preset.label}`);
 }
@@ -2051,6 +2102,9 @@ function reuseSelectedSettings() {
   }
   $("infiniteTimeoutInput").checked = Boolean(item.infiniteTimeout);
   syncCustomSizeUI();
+  setPromptOptionsCollapsed(false);
+  setParameterPanelCollapsed(false);
+  updatePanelSummaries();
   setStatus("已复用选中项的提示词和参数");
 }
 

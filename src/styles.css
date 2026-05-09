@@ -525,6 +525,56 @@ h2 {
   gap: 6px;
 }
 
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+  margin-top: 10px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--surface-panel);
+  color: var(--text);
+  text-align: left;
+}
+
+.section-toggle span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.section-toggle strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-toggle::after {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  border-right: 1.5px solid var(--text-soft);
+  border-bottom: 1.5px solid var(--text-soft);
+  transform: rotate(45deg) translateY(-2px);
+}
+
+.section-toggle[aria-expanded="true"]::after {
+  transform: rotate(225deg) translateY(-2px);
+}
+
+.collapsible-body {
+  margin-top: 8px;
+}
+
 .prompt-input {
   height: 140px;
   min-height: 140px;
@@ -584,9 +634,7 @@ textarea:focus {
 }
 
 .parameter-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: block;
   margin-top: 8px;
 }
 

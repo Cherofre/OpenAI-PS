@@ -24,13 +24,29 @@ assert(
   "Base URL should live behind a collapsed advanced connection section"
 );
 assert(
+  html.includes('id="promptOptionsToggleBtn"') &&
+    html.includes('id="promptOptionsBody"') &&
+    html.includes('id="parameterToggleBtn"') &&
+    html.includes('id="parameterBody"') &&
+    /promptOptionsBody" class="collapsible-body hidden"/.test(html) &&
+    /parameterBody" class="collapsible-body hidden"/.test(html),
+  "prompt options and generation settings should be collapsed by default"
+);
+assert(
   /function bindInputValueGuards\(/.test(js) &&
     /restoreUnexpectedFocusClear\(input\)/.test(js) &&
     /getGuardedInputIds\(\)[\s\S]*promptInput[\s\S]*negativePromptInput[\s\S]*posterTextInput/.test(js),
   "prompt and text inputs should be guarded against UXP focus-time clearing"
 );
 assert(
+  /function updatePanelSummaries\(/.test(js) &&
+    /promptOptionsSummary/.test(js) &&
+    /parameterSummary/.test(js),
+  "collapsed prompt and parameter panels should show useful summaries"
+);
+assert(
   /quick-advanced-toggle/.test(css) &&
+    /section-toggle/.test(css) &&
     /\.prompt-input:focus,[\s\S]*box-shadow:\s*inset 0 0 0 1px/.test(css),
   "interactive controls should have visible focus and advanced toggle styling"
 );

@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenAI 图片</title>
-    <link rel="stylesheet" href="./src/styles.css?v=0.1.23" />
-    <script src="./src/app.js?v=0.1.23" defer></script>
+    <link rel="stylesheet" href="./src/styles.css?v=0.1.24" />
+    <script src="./src/app.js?v=0.1.24" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -15,7 +15,7 @@
             <div class="title-inline">
               <span id="connectionBadge" class="connection-dot" aria-hidden="true" title="未配置 API Key"></span>
               <h1>OpenAI 图片</h1>
-              <span id="versionText" class="version-inline">v0.1.23</span>
+              <span id="versionText" class="version-inline">v0.1.24</span>
             </div>
             <button id="settingsToggleBtn" class="icon-button settings-entry-button" type="button" title="打开 API 设置" aria-label="打开 API 设置">
               <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -128,14 +128,25 @@
             </div>
             <div id="promptPresetMenu" class="preset-menu hidden"></div>
             <textarea id="promptInput" class="prompt-input" placeholder="描述您想要生成的画面..."></textarea>
-            <label id="negativePromptLabel" for="negativePromptInput" class="section-label secondary-label">反向提示词 (Negative Prompt)</label>
-            <input id="negativePromptInput" class="field-input" type="text" placeholder="不希望出现的内容..." />
-            <label for="posterTextInput" class="section-label secondary-label">画面文字</label>
-            <input id="posterTextInput" class="field-input" type="text" placeholder="可选，逐字填写必须出现在图里的标题或短句" />
+            <button id="promptOptionsToggleBtn" class="section-toggle" type="button" aria-expanded="false" aria-controls="promptOptionsBody">
+              <span>提示选项</span>
+              <strong id="promptOptionsSummary">可选</strong>
+            </button>
+            <div id="promptOptionsBody" class="collapsible-body hidden">
+              <label id="negativePromptLabel" for="negativePromptInput" class="section-label secondary-label">反向提示词 (Negative Prompt)</label>
+              <input id="negativePromptInput" class="field-input" type="text" placeholder="不希望出现的内容..." />
+              <label for="posterTextInput" class="section-label secondary-label">画面文字</label>
+              <input id="posterTextInput" class="field-input" type="text" placeholder="可选，逐字填写必须出现在图里的标题或短句" />
+            </div>
           </section>
 
           <section class="section-block parameter-section">
-            <div class="parameter-grid">
+            <button id="parameterToggleBtn" class="section-toggle" type="button" aria-expanded="false" aria-controls="parameterBody">
+              <span>生成设置</span>
+              <strong id="parameterSummary">自动尺寸 · 自动质量 · 1 张</strong>
+            </button>
+            <div id="parameterBody" class="collapsible-body hidden">
+              <div class="parameter-grid">
               <label id="sizeField" class="form-field">
                 <span class="form-label">尺寸</span>
                 <div class="select-wrap">
@@ -198,26 +209,27 @@
                 <span class="form-label">超时(秒)</span>
                 <input id="timeoutInput" type="number" min="1" max="3600" step="1" value="300" />
               </label>
-            </div>
-            <label class="checkbox-line" for="infiniteTimeoutInput">
-              <input id="infiniteTimeoutInput" type="checkbox" />
-              <span>无限超时</span>
-            </label>
-            <div id="customSizeControls" class="custom-size-controls hidden">
-              <label class="form-field">
-                <span class="form-label">自定义宽</span>
-                <input id="customWidthInput" type="number" min="16" max="3840" step="16" value="1536" />
+              </div>
+              <label class="checkbox-line" for="infiniteTimeoutInput">
+                <input id="infiniteTimeoutInput" type="checkbox" />
+                <span>无限超时</span>
               </label>
-              <label class="form-field">
-                <span class="form-label">自定义高</span>
-                <input id="customHeightInput" type="number" min="16" max="3840" step="16" value="864" />
+              <div id="customSizeControls" class="custom-size-controls hidden">
+                <label class="form-field">
+                  <span class="form-label">自定义宽</span>
+                  <input id="customWidthInput" type="number" min="16" max="3840" step="16" value="1536" />
+                </label>
+                <label class="form-field">
+                  <span class="form-label">自定义高</span>
+                  <input id="customHeightInput" type="number" min="16" max="3840" step="16" value="864" />
+                </label>
+                <div id="customSizeHint" class="custom-size-hint">宽高需为 16 的倍数。</div>
+              </div>
+              <label class="checkbox-line" for="fitSelectionInput">
+                <input id="fitSelectionInput" type="checkbox" checked />
+                <span>贴合当前选区</span>
               </label>
-              <div id="customSizeHint" class="custom-size-hint">宽高需为 16 的倍数。</div>
             </div>
-            <label class="checkbox-line" for="fitSelectionInput">
-              <input id="fitSelectionInput" type="checkbox" checked />
-              <span>贴合当前选区</span>
-            </label>
           </section>
 
           <section id="outpaintControls" class="section-block outpaint-panel hidden">
@@ -289,7 +301,7 @@
       <section id="settingsView" class="settings-view hidden">
         <header class="settings-header">
           <button id="settingsBackBtn" class="icon-button back-button" type="button" title="返回" aria-label="返回"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" /></svg></button>
-          <div class="settings-title"><h2>服务设置</h2><span class="version-inline">v0.1.23</span></div>
+          <div class="settings-title"><h2>服务设置</h2><span class="version-inline">v0.1.24</span></div>
         </header>
         <div class="settings-scroll">
           <section class="settings-group">
