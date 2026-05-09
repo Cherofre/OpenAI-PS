@@ -27,7 +27,7 @@ assert(
   "fetch aborts should throw the timeout error before the XHR fallback path"
 );
 
-const sendRequestBody = source.match(/async function sendRequest[\s\S]*?\n}\n\nfunction sendXhrRequest/);
+const sendRequestBody = source.match(/async function sendRequest[\s\S]*?\r?\n}\r?\n\r?\nfunction sendXhrRequest/);
 assert(sendRequestBody, "could not locate sendRequest body");
 const abortCheckIndex = sendRequestBody[0].indexOf("isAbortError(fetchError)");
 const xhrFallbackIndex = sendRequestBody[0].lastIndexOf("catch (xhrError)");

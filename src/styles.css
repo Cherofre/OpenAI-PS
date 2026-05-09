@@ -94,7 +94,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
+  box-shadow: inset 0 0 0 1px rgba(169, 191, 255, 0.45), 0 0 0 3px var(--primary-glow);
 }
 
 input[type="text"],
@@ -103,11 +103,14 @@ input[type="number"],
 input[type="search"],
 select {
   height: 30px;
+  min-height: 30px;
   padding: 0 10px;
+  line-height: 30px;
 }
 
 textarea {
   resize: none;
+  min-height: 44px;
 }
 
 select {
@@ -247,7 +250,7 @@ h2 {
   font-size: 14px;
   font-weight: 700;
   line-height: 18px;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .version-inline {
@@ -699,7 +702,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
+  box-shadow: inset 0 0 0 1px rgba(169, 191, 255, 0.45), 0 0 0 3px var(--primary-glow);
 }
 
 .field-input {
@@ -709,6 +712,7 @@ textarea:focus {
   background: var(--surface-low);
   color: var(--text);
   font-size: 12.5px;
+  line-height: 36px;
 }
 
 .preset-menu {
@@ -819,6 +823,7 @@ textarea:focus {
 .checkbox-line,
 .checkbox-line span {
   color: #f2f5f8;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .checkbox-line input {
@@ -1828,7 +1833,10 @@ textarea:disabled {
 
 .history-toolbar {
   display: block;
-  float: right;
+  clear: both;
+  float: none;
+  width: 100%;
+  margin-top: 8px;
 }
 
 .history-search-input,
@@ -2148,6 +2156,17 @@ textarea::placeholder {
 .selected-preview-meta,
 .empty-state,
 .version-inline {
+  color: var(--text-soft);
+  -webkit-text-fill-color: var(--text-soft);
+  opacity: 1;
+}
+
+.quick-api-summary,
+.status-row,
+.settings-status-row,
+.status-text,
+.version-inline {
+  color: var(--text-muted);
   -webkit-text-fill-color: currentColor;
   opacity: 1;
 }
