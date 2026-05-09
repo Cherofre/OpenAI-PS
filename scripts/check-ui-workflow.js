@@ -45,6 +45,18 @@ assert(
   "collapsed prompt and parameter panels should show useful summaries"
 );
 assert(
+  /confirmPluginAction\("清空当前结果/.test(js) &&
+    /confirmPluginAction\("清空所有手动参考图/.test(js) &&
+    /confirmPluginAction\("清空本地历史记录索引/.test(js),
+  "destructive clear actions should ask for confirmation"
+);
+assert(
+  /empty\.className = "empty-state"/.test(js) &&
+    /生成后会显示结果缩略图/.test(js) &&
+    /\.thumb-grid \.empty-state/.test(css),
+  "result and history grids should show clear empty states"
+);
+assert(
   /quick-advanced-toggle/.test(css) &&
     /section-toggle/.test(css) &&
     /\.prompt-input:focus,[\s\S]*box-shadow:\s*inset 0 0 0 1px/.test(css),

@@ -1252,6 +1252,21 @@ textarea:disabled {
   line-height: 1;
 }
 
+.thumb-grid .empty-state {
+  width: 100%;
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px;
+  border: 1px dashed var(--line);
+  border-radius: 2px;
+  background: var(--surface-panel);
+  color: var(--text-soft);
+  font-size: 11px;
+  text-align: center;
+}
+
 .bottom-dock {
   display: flex;
   flex: none;

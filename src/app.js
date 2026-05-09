@@ -136,7 +136,8 @@ function bindEvents() {
 
   $("generateBtn").addEventListener("click", runGeneration);
   $("importSelectedBtn").addEventListener("click", importSelected);
-  $("clearResultsBtn").addEventListener("click", () => {
+  $("clearResultsBtn").addEventListener("click", async () => {
+    if (state.results.length && !await confirmPluginAction("清空当前结果？历史记录不会删除。")) return;
     state.results = [];
     state.selectedId = null;
     renderResults();
@@ -534,7 +535,8 @@ async function addManualReferenceFiles() {
   }
 }
 
-function clearManualReferenceFiles() {
+async function clearManualReferenceFiles() {
+  if (state.manualReferenceFiles.length && !await confirmPluginAction("清空所有手动参考图？")) return;
   state.manualReferenceFiles = [];
   renderManualReferenceSummary();
   setStatus("手动参考图已清空");
@@ -848,6 +850,8 @@ async function runGeneration() {
     renderResults();
     await Promise.all(stamped.map(saveHistoryItem));
     const imported = await importGeneratedResult(stamped[0], { manageBusy: false });
+    setPromptOptionsCollapsed(true);
+    setParameterPanelCollapsed(true);
     setProgress(100, true);
     setStatus(imported
       ? `完成：生成 ${stamped.length} 张，已导入第一张`
@@ -1958,6 +1962,14 @@ function getFilteredHistory() {
 function renderGrid(container, items, isCurrent) {
   container.innerHTML = "";
 
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = isCurrent ? "生成后会显示结果缩略图" : "暂无历史，生成图片后会自动保存";
+    container.appendChild(empty);
+    return;
+  }
+
   items.forEach((item) => {
     const tile = document.createElement("button");
     tile.type = "button";
@@ -2192,6 +2204,7 @@ async function loadHistory() {
 }
 
 async function clearHistory() {
+  if (state.history.length && !await confirmPluginAction("清空本地历史记录索引？已保存的图片文件不会自动删除。")) return;
   localStorage.setItem(HISTORY_KEY, "[]");
   state.history = [];
   renderHistory();
@@ -2275,6 +2288,20 @@ async function showPluginAlert(message) {
   } catch (error) {
     console.warn("window.alert failed", error);
   }
+}
+
+async function confirmPluginAction(message) {
+  const text = String(message || "确定继续？");
+  try {
+    if (typeof window !== "undefined" && typeof window.confirm === "function") {
+      return window.confirm(text);
+    }
+  } catch (error) {
+    console.warn("window.confirm failed", error);
+  }
+
+  await showPluginAlert(text);
+  return true;
 }
 
 function updateStatusTone(message) {
