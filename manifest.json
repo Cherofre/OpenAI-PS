@@ -1,7 +1,7 @@
 {
   "id": "com.local.openai.photoshop.generator",
   "name": "OpenAI Photoshop Generator",
-  "version": "0.1.24",
+  "version": "0.2.0",
   "manifestVersion": 5,
   "host": {
     "app": "PS",
@@ -34,12 +34,12 @@
         "height": 10000
       },
       "preferredDockedSize": {
-        "width": 400,
-        "height": 920
+        "width": 420,
+        "height": 960
       },
       "preferredFloatingSize": {
-        "width": 460,
-        "height": 960
+        "width": 480,
+        "height": 1000
       },
       "icons": [
         {

@@ -1970,10 +1970,11 @@ function renderGrid(container, items, isCurrent) {
     return;
   }
 
-  items.forEach((item) => {
+  items.forEach((item, index) => {
     const tile = document.createElement("button");
     tile.type = "button";
     tile.className = "thumb-tile";
+    tile.style.animationDelay = `${Math.min(index, 6) * 30}ms`;
     tile.classList.toggle("is-active", item.id === state.selectedId);
     tile.title = describeItem(item);
 
@@ -1992,7 +1993,7 @@ function renderGrid(container, items, isCurrent) {
     container.appendChild(tile);
   });
 
-  fillGridPlaceholders(container, Math.max(0, 6 - items.length), isCurrent ? "results" : "history");
+  fillGridPlaceholders(container, Math.max(0, 4 - items.length), isCurrent ? "results" : "history");
 }
 
 function renderSelectedPreview() {
